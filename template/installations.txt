@@ -1,0 +1,4 @@
+# Activating virtual enviornment: 'venv\Scripts\activate' - OS in terminal or 'source venv/bin/activate'
+
+# Install flask: 'pip install Flask' in terminal 
+# Install MySQL Connector: 'pip install mysql-connector-python' in terminal

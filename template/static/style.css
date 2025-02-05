@@ -1,0 +1,10 @@
+/* General styles */
+body {
+    color: #050316;
+    font-family: "Times New Roman", serif;
+    font-size: 15pt;
+}
+
+main {
+    padding-bottom: 20px; /* Add space at the bottom so content doesn't overlap footer */
+}
