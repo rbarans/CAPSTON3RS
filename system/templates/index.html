@@ -10,37 +10,65 @@
 
 	<!--YOUR OWN JAVASCRIPT CAN GO RIGHT HERE-->
 	<script type="text/javascript">
-		function TestButtonHandler() {
-			var webMethod = "ProjectServices.asmx/TestConnection";
-			var parameters = "{}";
 
-			//jQuery ajax method
-			$.ajax({
-				type: "POST",
-				url: webMethod,
-				data: parameters,
-				contentType: "application/json; charset=utf-8",
-				dataType: "json",
-				success: function (msg) {
-					var responseFromServer = msg.d;
-					alert(responseFromServer);
-				},
-				error: function (e) {
-					alert("this code will only execute if javascript is unable to access the webservice");
-				}
-			});
-		}
 	</script>
 	<!--END OF YOUR OWN JAVASCRIPT-->
 
 	<!--AND YOUR OWN CSS CAN GO HERE AS WELL-->
 	<style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #e692b7;
+        }
+        .survey-button {
+            background-color: #ff7575;
+            color: white;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .survey-button:hover {
+            background-color: #e692b7;
+        }
+        .info {
+            margin-top: 30px;
+            font-size: 1rem;
+            color: #555;
+        }
+
 
 	</style>
 	<!--END OF YOUR OWN CSS-->
 </head >
 <body>
-	<button onclick="javascript: TestButtonHandler();">Click here to test connection!</button>
+    
+	<div class="container">
+        <h1>Welcome to the Survey!</h1>
+        <p>Swipe through questions and share your thoughts!</p>
+        <button class="survey-button" onclick="location.href='survey.html'">Start Survey</button>
+        <div class="info">
+            <p>Have questions? <a href="contact.html">Contact us</a></p>
+        </div>
+    </div>
+	
 </body>
 
 {% endblock %}
