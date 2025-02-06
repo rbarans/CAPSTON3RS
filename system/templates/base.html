@@ -11,12 +11,14 @@
 
     <div class="navbar">
         <h2>Survey App</h2>
+  <a href="/" class="nav-link">Home</a>
         {% if current_user.is_authenticated %}
             <a href="{{ url_for('logout') }}">Log Out</a>
         {% else %}
             <a href="{{ url_for('login') }}">Log In</a>
         {% endif %}
     </div>
+
 
     {% block content %}{% endblock %}
 
