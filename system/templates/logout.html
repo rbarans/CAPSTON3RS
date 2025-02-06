@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Before you go, rate your day!</h2>
+    <div>
+        <a href="{{ url_for('rate_day', rating=1) }}">😞</a>
+        <a href="{{ url_for('rate_day', rating=2) }}">🙁</a>
+        <a href="{{ url_for('rate_day', rating=3) }}">😐</a>
+        <a href="{{ url_for('rate_day', rating=4) }}">🙂</a>
+        <a href="{{ url_for('rate_day', rating=5) }}">😁</a>
+    </div>
+{% endblock %}
