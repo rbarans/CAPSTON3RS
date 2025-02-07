@@ -1,6 +1,5 @@
 import mysql.connector, os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify 
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin
 from datetime import datetime
 
@@ -103,6 +102,11 @@ def rate_day(rating):
 
     return redirect(url_for('login'))  # Redirect to login page if not logged in
 
+# Route to render the create account form
+@app.route('/createaccount', methods=['GET'])
+def createaccount_form():
+    return render_template('createaccount.html')
+
 # Route to create a new user
 @app.route('/createaccount', methods=['POST'])
 def createaccount():
@@ -117,14 +121,19 @@ def createaccount():
     try:
         conn = get_db_connection()
         cursor = conn.cursor() 
-        cursor.execute("INSERT INTO user (username, password) VALUES (?, ?)", (username, password))
+        cursor.execute("INSERT INTO User (username, password) VALUES (%s, %s)", (username, password))
         conn.commit()
         cursor.close()
         conn.close()
+        
         return jsonify({"message": "User registered successfully!"}), 201
-    except sqlite3.IntegrityError:
+    except mysql.connector.IntegrityError:
         return jsonify({"error": "Username already exists!"}), 409
- 
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
