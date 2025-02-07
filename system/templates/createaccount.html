@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<head>
+	<meta charset="utf-8" />
+	<title></title>
+	
+    <!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<!--YOUR OWN JAVASCRIPT CAN GO RIGHT HERE-->
+	<script type="text/javascript">
+        const form = document.querySelector('form');
+        form.addEventListener('submit', (event) => {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                event.preventDefault();
+            }
+        });
+	</script>
+	<!--END OF YOUR OWN JAVASCRIPT-->
+
+	<!--AND YOUR OWN CSS CAN GO HERE AS WELL-->
+	<style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #e692b7;
+        }
+        .survey-button {
+            background-color: #ff7575;
+            color: white;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .survey-button:hover {
+            background-color: #e692b7;
+        }
+        .info {
+            margin-top: 30px;
+            font-size: 1rem;
+            color: #555;
+        }
+
+
+	</style>
+	<!--END OF YOUR OWN CSS-->
+</head >
+<body>
+    
+    <div class="container">
+        <h1>Create Your Account</h1>
+        <form action="/register" method="POST">
+            <div class="form-group">
+                <label for="username">Full Name:</label>
+                <input type="text" id="username" name="username" required placeholder="Enter your full name">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email address">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required placeholder="Enter a password">
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your password">
+            </div>
+
+            <div class="form-group">
+                <label for="terms">
+                    <input type="checkbox" id="terms" name="terms" required> I agree to the Terms and Conditions
+                </label>
+            </div>
+
+            <button type="submit" class="btn-submit">Create Account</button>
+
+            <p class="login-redirect">Already have an account? <a href="/login">Login here</a></p>
+        </form>
+    </div>
+ 
+	
+</body>
+
+{% endblock %}
