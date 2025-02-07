@@ -1,10 +1,66 @@
 /* General styles */
+
 body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f2f2f2;
+    text-align: center;
     color: #050316;
-    font-family: "Times New Roman", serif;
-    font-size: 15pt;
+    font-size: 14pt;
+}
+ 
+table {
+    width: 50%;
+    margin: auto;
+    border-collapse: collapse;
+}
+td {
+    padding: 10px;
+}
+input {
+    width: 100%;
+    padding: 8px;
 }
 
 main {
     padding-bottom: 20px; /* Add space at the bottom so content doesn't overlap footer */
+}
+
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+h1 {
+    font-size: 2.5rem;
+    color: #e692b7;
+}
+.survey-button {
+    background-color: #ff7575;
+    color: white;
+    font-size: 1.2rem;
+    padding: 15px 30px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.survey-button:hover {
+    background-color: #e692b7;
+}
+.info {
+    margin-top: 30px;
+    font-size: 1rem;
+    color: #555;
+}
+
+#message {
+    color: red;
+    font-size: 14px;
+    text-align: center;
 }
