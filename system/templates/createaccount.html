@@ -9,7 +9,7 @@
 
     <!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -78,10 +78,14 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    alert(data.message || data.error);
+                    Swal.fire({
+                        title: 'Message',
+                        text: data.message || data.error,
+                        icon: data.message ? 'success' : 'error'
+                    });
                     if (data.message) {
                         document.getElementById("registerForm").reset();
-                        document.getElementById("submitBtn").disabled = true;
+                        document.getElementById("btnSubmit").disabled = true;
                         document.getElementById("message").textContent = "";
                     }
                 })
