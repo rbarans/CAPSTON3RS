@@ -48,6 +48,7 @@ def home():
     return render_template('index.html')
 
 
+###### need to do error catch block if someone is going to submit more than twice in one day
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -68,6 +69,7 @@ def login():
     return render_template('login.html')
 
 
+###### while user ID not in emoji feedback redirect to emoji page and if they are in emoji feedback, log out
 # Log out route
 @app.route('/logout')
 def logout():
