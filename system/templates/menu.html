@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Question Form{% endblock %}
+{% block content %}
+<style>
+    body{
+        font-family: Arial;
+        text-align: center;
+        margin: 25px;
+    }
+    .nav-container{
+        display: flex;
+        justify-content: center;
+        gap: 25px;
+    }
+    .nav-item{
+        font-size: 1.5rem;
+        background-color: navy;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 10px 30px;
+        border-radius: 10px;
+    }
+    .nav-item:hover{
+        background-color: #0707f0;
+    }
+</style>
+<h1>Survey Menu</h1>
+<div class="nav-container">
+    <a class="nav-item" href="post.html">1: Post</a>
+    <a class="nav-item" href="vote.html">2: Vote</a>
+    <a class="nav-item" href="checkout.html">3: Checkout</a>
+</div>
+{% endblock %}
