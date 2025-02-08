@@ -69,38 +69,73 @@ def login():
     return render_template('login.html')
 
 
-###### while user ID not in emoji feedback redirect to emoji page and if they are in emoji feedback, log out
+###### while user ID not in emoji feedback redirect to logout.html and if they are in emoji feedback redirect to feedback_options.html. Allow users to see previous feeback, change it if they'd like, or log off without changing.
 # Log out route
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
-        return render_template('logout.html')
-    return redirect(url_for('login'))  # Redirect to login page if not logged in
-
-
-# Rate Day route
-@app.route('/rate_day/<int:rating>')
-def rate_day(rating):
-    if current_user.is_authenticated:
+        if request.args.get('direct_logout') == 'true':  # Added this condition for logging out without changing rating for exisiting users (see feedback_options.html)
+            logout_user()  # Log the user out
+            return render_template('message.html', message="You have been logged out.")
         user_id = current_user.id
-        submission_time = datetime.now()  # Get the current date and time
+        submission_date = datetime.now().date() #using just the date because SQL can't convert datetime into just date for referencing unique conditions
 
-        # Save the rating and submission time to the database
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                       (user_id, rating, submission_time))
-        conn.commit()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM EmojiFeedback WHERE UserID = %s AND DATE(SubmissionDate) = %s",
+            (user_id, submission_date)
+        )
+        existing_feedback = cursor.fetchone() #checking for existing feedback for a user on that specific day
         cursor.close()
         conn.close()
 
-        # Log the user out
-        logout_user()
+        if existing_feedback:
+            emoji_map = {1: "😞", 2: "🙁", 3: "😐", 4: "🙂", 5: "😁"} #stores emojis into values to show on the frontend
+            selected_emoji = emoji_map.get(existing_feedback['EmojiRating'], "😐")
+            return render_template(
+                'feedback_options.html',
+                selected_emoji=selected_emoji
+            )
+        else:
+            return render_template('logout.html') #no existing feedback then fill out for the first time
+    return redirect(url_for('login'))
 
-        # Redirect to the home page with a logout message
+@app.route('/rate_day', methods=['POST'])
+def rate_day():
+    if current_user.is_authenticated:
+        user_id = current_user.id
+        submission_date = datetime.now().date()
+        new_rating = int(request.form['rating'])
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check for existing feedback
+        cursor.execute(
+            "SELECT * FROM EmojiFeedback WHERE UserID = %s AND DATE(SubmissionDate) = %s",
+            (user_id, submission_date)
+        )
+        existing_feedback = cursor.fetchone()
+
+        if existing_feedback:
+            # Update the existing feedback
+            cursor.execute(
+                "UPDATE EmojiFeedback SET EmojiRating = %s WHERE FeedbackID = %s",
+                (new_rating, existing_feedback['FeedbackID'])
+            )
+        else:
+            # Insert new feedback
+            cursor.execute(
+                "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
+                (user_id, new_rating, datetime.now())
+            )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        logout_user()
         return render_template('message.html', message="You have been logged out.")
 
-    return redirect(url_for('login'))  # Redirect to login page if not logged in
+    return redirect(url_for('login'))
 
 # Route to render the create account form
 @app.route('/createaccount', methods=['GET'])

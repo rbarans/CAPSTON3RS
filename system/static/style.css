@@ -64,3 +64,34 @@ h1 {
     font-size: 14px;
     text-align: center;
 }
+
+.feedback-options {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.feedback-options a {
+    font-size: 1.5rem;
+    margin: 0 10px;
+    text-decoration: none;
+    color: #ff7575;
+}
+
+.feedback-options a:hover {
+    color: #e692b7;
+}
+
+.survey-nochangebutton {
+    background-color: #ff7575;
+    color: white;
+    padding: 10px 20px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+.survey-nochangebutton:hover {
+    background-color: #e692b7;
+}
