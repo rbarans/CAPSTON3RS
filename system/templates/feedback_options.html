@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>You've already submitted feedback today!</h2>
+<p>Your current rating: {{ selected_emoji }}</p>
+<div>
+    <form method="POST" action="{{ url_for('rate_day') }}">
+        <button type="submit" name="rating" value="1">Change to 😞</button>
+        <button type="submit" name="rating" value="2">Change to 🙁</button>
+        <button type="submit" name="rating" value="3">Change to 😐</button>
+        <button type="submit" name="rating" value="4">Change to 🙂</button>
+        <button type="submit" name="rating" value="5">Change to 😁</button>
+    </form>
+    <a href="{{ url_for('logout', direct_logout='true') }}" class="survey-nochangebutton">Log Out Without Changing</a>
+</div>
+{% endblock %}
