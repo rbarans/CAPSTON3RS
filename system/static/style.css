@@ -27,6 +27,20 @@ main {
     padding-bottom: 20px; /* Add space at the bottom so content doesn't overlap footer */
 }
 
+/*Zar */
+button
+{
+    background-color: #ff7575;
+    color: white;
+    font-size: 1.2rem;
+    padding: 15px 30px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/*  */
 
 .container {
     max-width: 900px;
@@ -39,6 +53,7 @@ main {
 h1 {
     font-size: 2.5rem;
     color: #e692b7;
+    padding-top: 10px;
 }
 .survey-button {
     background-color: #ff7575;
@@ -95,3 +110,194 @@ h1 {
 .survey-nochangebutton:hover {
     background-color: #e692b7;
 }
+
+/* Zar */
+/* //////////////////////////////////////  */
+ 
+.createaccount-table {
+    width:40%;
+    border-collapse: collapse;
+}
+
+.createaccount-table th,
+.createaccount-table td {
+    padding: 1rem;
+    text-align: left;
+}
+
+textarea {
+    resize: none;
+    /* Prevent resizing */
+    width: 500px;
+    height: 50px;
+    /* Set a fixed height */
+} 
+
+/* Navigation Bar */
+.navbar {
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1rem 2rem;
+    display: block;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+ 
+.nav-link {
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    padding-right: 1.5rem;
+}
+
+.nav-link:hover {
+    color: #2980b9;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+ 
+
+/* Main Content Container */
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Suggestion Management Section */
+.suggestion-management {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    color: #34495e;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+/* Form Elements */
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.input-field {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.input-field:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+.add-button {
+    background-color: #3498db;
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.add-button:hover {
+    background-color: #2980b9;
+}
+
+/* Suggestions List */
+.suggestions-list {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.suggestion-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.suggestion-table th,
+.suggestion-table td {
+    padding: 1rem;
+    text-align: left;
+}
+
+.suggestion-table thead {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.suggestion-table th {
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.suggestion-table tbody tr {
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.suggestion-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.action-button {
+    background: none;
+    border: none;
+    color: #3498db;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: 0 0.25rem;
+}
+
+.action-button:hover {
+    color: #2980b9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 0.5rem;
+    }
+
+    .suggestion-management {
+        padding: 1rem;
+    }
+
+    .suggestion-table th,
+    .suggestion-table td {
+        padding: 0.75rem;
+    }
+}
+/* ////////////////////// */

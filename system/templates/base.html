@@ -19,7 +19,7 @@
         {% if current_user.is_authenticated %}
  
         <a href="{{ url_for('add_suggestion') }}" class="nav-link">Suggestion</a>
-        <a href="{{ url_for('profile') }}">My Profile</a>
+        <a href="{{ url_for('profile') }}" class="nav-link">My Profile</a>
         <a href="{{ url_for('logout') }}" class="nav-link">Log Out</a>
         {% else %}
         <a href="{{ url_for('login') }}" class="nav-link">Log In</a>
