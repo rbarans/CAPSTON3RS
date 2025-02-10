@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<head>
+    <meta charset="utf-8" />
+    <title>Suggestion Managment</title>
+    <link rel="stylesheet" href="../static/style.css" />
+
+    <!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+
+<body>
+
+    <div class="container">
+        <h1>Suggestion Management</h1>
+
+        <!-- Suggestion Form -->
+        <form id="suggestionForm" method="POST">
+            <table>
+                <tr>
+                    <td><label for="Description">Suggestion:</label></td>
+                    <td><textarea type="text"  id="Description" name="Description" required></textarea></td>
+                </tr>
+                <tr>
+                    <td><label for="Comments">Comments:</label></td>
+                    <td><textarea type="text" id="Comments" name="Comments"></textarea></td>
+                </tr>
+
+                <tr>
+                    <td> </td>
+                    <td>
+                        <button id="btnSubmit" type="submit"  class="btn-submit">Add</button>
+                        <button id="btnCancel" type="button"  class="btn-submit">Cancel</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+
+        <h2>Suggestions List</h2>
+
+        <!-- Suggestions Table -->
+        <table>
+            <tr>
+                <th>Suggestion</th> 
+                <th>Created Date</th>
+                <th>Action</th>
+            </tr>
+            {% for suggestion in suggestions %}
+            <tr>
+                <td>{{ suggestion.Description }}</td> 
+                <td>{{ suggestion.CreatedDate }}</td>
+                <td>
+                    <form id="deleteForm" method="POST">
+                        <input type="hidden" name="SuggestionID" value="{{ suggestion.SuggestionID }}">
+                        <button type="submit" class="delete-btn">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+
+
+    <!--YOUR OWN JAVASCRIPT-->
+    <script type="text/javascript">
+         
+        document.getElementById("suggestionForm").addEventListener("submit", function (event) {
+            event.preventDefault(); // Prevent form from refreshing the page
+
+            let formData = new FormData(this);
+
+            fetch("/suggestion", {
+                method: "POST",
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.fire({
+                        title: 'Message',
+                        text: data.message || data.error,
+                        icon: data.message ? 'success' : 'error'
+                    });
+                    if (data.message) {
+                        document.getElementById("suggestionForm").reset();
+                        document.getElementById("btnSubmit").disabled = true; 
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+        });
+
+        
+        document.getElementById("btnCancel").addEventListener("click", function () {
+            document.getElementById("suggestionForm").reset();
+        });
+    </script>
+    <!--END OF YOUR OWN JAVASCRIPT-->
+</body>
+
+{% endblock %}
