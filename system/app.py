@@ -1,9 +1,14 @@
+# started by Rana 
+
 import mysql.connector, os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify 
-from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin,login_required 
-from datetime import datetime  
+ 
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
+from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
+from datetime import datetime
 
 app = Flask(__name__)
+profile_bp = Blueprint('profile', __name__)
+
 
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem to persist session data
 app.config['SESSION_PERMANENT'] = True
@@ -101,6 +106,7 @@ def logout():
             return render_template('logout.html') #no existing feedback then fill out for the first time
     return redirect(url_for('login'))
 
+
 @app.route('/rate_day', methods=['POST'])
 def rate_day():
     if current_user.is_authenticated:
@@ -137,7 +143,60 @@ def rate_day():
 
     return redirect(url_for('login'))
 
-# Zar: Route to render the create account form
+ 
+@app.route('/profile')
+@login_required
+def profile():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    
+    # Fetch total points
+    cursor.execute("SELECT points FROM User WHERE userID = %s", (user_id,))  # Use %s for MySQL
+    user = cursor.fetchone()
+    total_points = user['points'] if user else 0
+
+
+    # Fetch user suggestions
+    cursor.execute(
+        "SELECT description, createdDate, netVotes FROM Suggestion WHERE userID = %s",
+        (user_id,)
+    )
+    suggestions = cursor.fetchall()
+
+    # Fetch emoji reactions
+    cursor.execute(
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s",
+        (user_id,)
+    )
+    emoji_reactions = cursor.fetchall()
+
+    # Fetch votes made by user
+    cursor.execute(
+        "SELECT voteType, suggestionID, VotedDate FROM Vote WHERE userID = %s",
+        (user_id,)
+    )
+    votes_given = cursor.fetchall()
+
+
+    cursor.close()  # Close the cursor after use
+    conn.close()
+
+    return render_template(
+        'profile.html',
+        total_points=total_points,
+        suggestions=suggestions,
+        emoji_reactions=emoji_reactions,
+        votes_given=votes_given
+    )
+
+
+# Zar:
+# Route to render the create account form
+
 @app.route('/createaccount', methods=['GET'])
 def createaccount_form():
     return render_template('createaccount.html')
