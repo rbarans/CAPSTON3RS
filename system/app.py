@@ -1,6 +1,7 @@
 # started by Rana 
 
 import mysql.connector, os
+ 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 from datetime import datetime
@@ -142,8 +143,7 @@ def rate_day():
 
     return redirect(url_for('login'))
 
-
-
+ 
 @app.route('/profile')
 @login_required
 def profile():
@@ -196,11 +196,12 @@ def profile():
 
 # Zar:
 # Route to render the create account form
+
 @app.route('/createaccount', methods=['GET'])
 def createaccount_form():
     return render_template('createaccount.html')
 
-# Route to create a new user
+# Zar : Route to create a new user
 @app.route('/createaccount', methods=['POST'])
 def createaccount():
     data = request.form  # Get form data
@@ -226,6 +227,99 @@ def createaccount():
         # Log the error
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred. Please try again later."}), 500
+
+
+# Zar: Route to render the suggestions form
+@app.route('/suggestion', methods=['GET'])
+@login_required
+def suggestion_form():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Suggestions")
+        suggestions = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return render_template('suggestion.html', suggestions=suggestions)
+    except Exception as e:
+        app.logger.error(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+     
+
+# Zar : Route to suggestions
+@app.route('/suggestion', methods=['POST'])
+@login_required
+def add_suggestion():
+    data = request.form
+    user_id = current_user.id
+    description = data.get("Description")
+    comments = data.get("Comments") 
+    created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+ 
+
+   # if not user_id or not description:
+   #     return jsonify({"error": user_id}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor() 
+
+        query = """
+                INSERT INTO Suggestion (UserID, Description, Comments, CreatedDate)
+                VALUES (%s, %s, %s, %s)
+                """
+        cursor.execute(query, (user_id, description, comments, created_date))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return cursor.lastrowid
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Function to update a suggestion
+def update_suggestion(suggestion_id, description=None, comments=None):
+    query = "UPDATE Suggestion SET "
+    updates = []
+    params = []
+    
+    if description is not None:
+        updates.append("Description = %s")
+        params.append(description)
+    if comments is not None:
+        updates.append("Comments = %s")
+        params.append(comments)
+
+    query += ", ".join(updates) + " WHERE SuggestionID = %s"
+    params.append(suggestion_id)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(query, params)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+# Function to delete a suggestion
+def delete_suggestion(suggestion_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+# # Example usage
+# if __name__ == "__main__":
+#     # Adding a new suggestion
+#     suggestion_id = add_suggestion(1, "New feature request", "Needs approval", 1, "2025-02-09 12:00:00")
+
+#     # Updating the suggestion
+#     update_suggestion(suggestion_id, comments="Reviewed by manager", status_id=2)
+
+#     # Deleting the suggestion
+#     delete_suggestion(suggestion_id)
 
 
 if __name__ == '__main__':
