@@ -1,0 +1,29 @@
+<!-- started by Rana -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>My Profile</h1>
+<p><strong>Total Points:</strong> {{ total_points }}</p>
+
+<h2>My Suggestions</h2>
+<ul>
+    {% for suggestion in suggestions %}
+    <li>{{ suggestion.description }} - {{ suggestion.createdDate }} (Votes: {{ suggestion.netVotes }})</li>
+    {% endfor %}
+</ul>
+
+<h2>My Emoji Reactions</h2>
+<ul>
+    {% for reaction in emoji_reactions %}
+    <li>{{ reaction.emojirating }} - {{ reaction.submissiondate }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Votes on Suggestions</h2>
+<ul>
+    {% for vote in votes_given %}
+    <li>{{ vote.voteType }} on Suggestion ID: {{ vote.suggestionID }} - {{ vote.VotedDate }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}
