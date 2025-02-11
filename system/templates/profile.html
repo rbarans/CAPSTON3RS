@@ -7,23 +7,124 @@
 <p><strong>Total Points:</strong> {{ total_points }}</p>
 
 <h2>My Suggestions</h2>
-<ul>
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
     {% for suggestion in suggestions %}
-    <li>{{ suggestion.description }} - {{ suggestion.createdDate }} (Votes: {{ suggestion.netVotes }})</li>
+    <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
+                position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
+        
+        <!-- Top Left: "Me" -->
+        <span style="position: absolute; top: 5px; left: 10px; font-weight: bold;">
+            Me
+        </span>        
+
+        <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
+        <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
+            {{ suggestion.createdDate.strftime('%m/%d/%Y') }}
+            <br>
+            {{ suggestion.createdDate.strftime('%I:%M %p') }}
+        </span>
+
+        <!-- Bottom Middle: Description -->
+        <p style="margin-top: 40px; font-size: 18px; color: #333;">
+            "{{ suggestion.description }}"
+        </p>
+
+        <br>
+
+        <!-- Display the vote counts at the bottom -->
+        <div class="vote-counts" style="display: flex; justify-content: space-around; margin-top: 15px; font-size: 14px; color: #333;">
+            <span>Positive Votes: {{ suggestion.positiveVotes }}</span>
+            <span>Negative Votes: {{ suggestion.negativeVotes }}</span>
+            <span>Net Votes: {{ suggestion.netVotes }}</span>
+        </div>
+
+    </div>
     {% endfor %}
-</ul>
+</div>
+
 
 <h2>My Emoji Reactions</h2>
-<ul>
-    {% for reaction in emoji_reactions %}
-    <li>{{ reaction.emojirating }} - {{ reaction.submissiondate }}</li>
-    {% endfor %}
-</ul>
+<!-- Display today's rating if available -->
+{% if todays_reaction %}
+    <p>Today's Rating: {{ selected_emoji }} 
+        {% if todays_reaction.emojirating == 1 %}😞{% elif todays_reaction.emojirating == 2 %}🙁{% elif todays_reaction.emojirating == 3 %}😐{% elif todays_reaction.emojirating == 4 %}🙂{% elif todays_reaction.emojirating == 5 %} 😁{% endif %}
+    </p>
+{% else %}
+    <p>No rating for today yet.</p>
+{% endif %}
 
-<h2>Votes on Suggestions</h2>
-<ul>
-    {% for vote in votes_given %}
-    <li>{{ vote.voteType }} on Suggestion ID: {{ vote.suggestionID }} - {{ vote.VotedDate }}</li>
-    {% endfor %}
-</ul>
+<!-- Button to show last week's ratings -->
+<button onclick="toggleLastWeekRatings()">Show Last Week's Ratings</button>
+
+<!-- Display last week's ratings excluding today's rating when the button is clicked -->
+<div id="last-week-ratings" style="display:none;">
+    {% if last_week_reactions %}
+        <ul>
+            {% for reaction in last_week_reactions %}
+                {{ reaction.submissiondate.strftime('%m/%d/%Y') }} : {% if reaction.emojirating == 1 %}😞{% elif reaction.emojirating == 2 %}🙁{% elif reaction.emojirating == 3 %}😐{% elif reaction.emojirating == 4 %}🙂{% elif reaction.emojirating == 5 %}😁{% endif %}
+                <br>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No ratings found for the previous week.</p>
+    {% endif %}
+</div>
+
+<br><br>
+
+<h2>My Votes</h2>
+
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
+    {% if votes_given %}
+        {% for vote in votes_given %}
+        <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
+                    position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
+            
+            <!-- Top Left: "Me" or "Anonymous" -->
+            <span style="position: absolute; top: 5px; left: 10px; font-weight: bold;">
+                {% if vote.userID == current_user.id %} Me {% else %} Anonymous {% endif %}
+            </span>        
+
+            <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
+            <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
+                {{ vote.CreatedDate.strftime('%m/%d/%Y') }}
+                <br>
+                {{ vote.CreatedDate.strftime('%I:%M %p') }}
+            </span>
+
+            <!-- Bottom Middle: Description -->
+            <p style="margin-top: 40px; font-size: 18px; color: #333;">
+                "{{ vote.description }}"
+            </p>
+
+            <!-- Bottom Middle: Vote Type -->
+            <p style="margin-top: 40px; font-size: 14px; color: #333;">
+                On {{vote.VotedDate.strftime('%m/%d/%Y') }} at {{ vote.VotedDate.strftime('%I:%M %p') }} I voted: 
+                {% if vote.voteType == 1 %}
+                    <span style="color: green; font-weight: bold; font-style: italic;">YES</span>
+                {% elif vote.voteType == 0 %}
+                    <span style="color: red; font-weight: bold; font-style: italic;">NO</span>
+                {% endif %}
+            </p>
+
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="text-align: center; font-size: 18px; color: #333;">You have not voted yet.</p>
+    {% endif %}
+</div>
+
+
+<script>
+    // Toggle the visibility of last week's ratings
+    function toggleLastWeekRatings() {
+        var element = document.getElementById("last-week-ratings");
+        if (element.style.display === "none") {
+            element.style.display = "block";
+        } else {
+            element.style.display = "none";
+        }
+    }
+</script>
+
 {% endblock %}

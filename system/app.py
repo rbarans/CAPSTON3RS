@@ -155,21 +155,34 @@ def profile():
     total_points = user['points'] if user else 0
 
     # Fetch user suggestions
-    cursor.execute(
-        "SELECT description, createdDate, netVotes FROM Suggestion WHERE userID = %s",
-        (user_id,))
+    cursor.execute("""
+        SELECT 
+            description, createdDate, netVotes, userID,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'upvote') AS positiveVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'downvote') AS negativeVotes
+        FROM Suggestion 
+        WHERE userID = %s
+    """, (user_id,))
     suggestions = cursor.fetchall()
 
-    # Fetch emoji reactions
+    # Fetch today's emoji reaction (if any)
     cursor.execute(
-        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s",
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
         (user_id,))
-    emoji_reactions = cursor.fetchall()
+    todays_reaction = cursor.fetchone()
 
-    # Fetch votes made by user
+    # Fetch emoji reactions from the past week, excluding today's reaction
     cursor.execute(
-        "SELECT voteType, suggestionID, VotedDate FROM Vote WHERE userID = %s",
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND submissiondate >= CURDATE() - INTERVAL 7 DAY AND DATE(submissiondate) < CURDATE()",
         (user_id,))
+    last_week_reactions = cursor.fetchall()
+
+    # Fetch votes made by user and the suggestion they voted on
+    cursor.execute("""
+        SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
+        FROM Vote v
+        JOIN Suggestion s ON v.suggestionID = s.suggestionID
+    """,)
     votes_given = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
@@ -179,9 +192,11 @@ def profile():
         'profile.html',
         total_points=total_points,
         suggestions=suggestions,
-        emoji_reactions=emoji_reactions,
+        todays_reaction=todays_reaction,
+        last_week_reactions=last_week_reactions,
         votes_given=votes_given
     )
+
 
 
 # Zar: route to render the create account form
