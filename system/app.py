@@ -1,7 +1,4 @@
-# started by Rana 
-
 import mysql.connector, os
- 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 from datetime import datetime
@@ -9,13 +6,11 @@ from datetime import datetime
 app = Flask(__name__)
 profile_bp = Blueprint('profile', __name__)
 
-
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem to persist session data
 app.config['SESSION_PERMANENT'] = True
 app.secret_key = os.urandom(24)  # Generates a random 24-byte secret key
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-
 
 # MySQL database connection function
 def get_db_connection():
@@ -28,13 +23,11 @@ def get_db_connection():
     )
     return conn
 
-
 # Define User class for Flask-Login
 class User(UserMixin):
     def __init__(self, id, username):
         self.id = id
         self.username = username
-
 
 # Flask-Login user loader
 @login_manager.user_loader
@@ -48,12 +41,13 @@ def load_user(user_id):
     return User(user['UserID'], user['Username']) if user else None
 
 
+# Rana: route to home page
 @app.route('/')
 def home():
     return render_template('index.html')
 
 
-###### need to do error catch block if someone is going to submit more than twice in one day
+# Rana: route to log in to account
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -74,11 +68,12 @@ def login():
     return render_template('login.html')
 
 
-###### while user ID not in emoji feedback redirect to logout.html and if they are in emoji feedback redirect to feedback_options.html. Allow users to see previous feeback, change it if they'd like, or log off without changing.
-# Log out route
+# Rana: route to log out of account 
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
+
+        # Jacob: edited to allow users to log out after already rating - can change or keep previous rating for the day 
         if request.args.get('direct_logout') == 'true':  # Added this condition for logging out without changing rating for exisiting users (see feedback_options.html)
             logout_user()  # Log the user out
             return render_template('message.html', message="You have been logged out.")
@@ -107,6 +102,7 @@ def logout():
     return redirect(url_for('login'))
 
 
+# Rana: Route to daily emoji rating
 @app.route('/rate_day', methods=['POST'])
 def rate_day():
     if current_user.is_authenticated:
@@ -116,7 +112,7 @@ def rate_day():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Check for existing feedback
+        # Jacob: edited to solve error and check for existing feedback
         cursor.execute(
             "SELECT * FROM EmojiFeedback WHERE UserID = %s AND DATE(SubmissionDate) = %s",
             (user_id, submission_date)
@@ -143,44 +139,51 @@ def rate_day():
 
     return redirect(url_for('login'))
 
- 
+
+# Rana: Route to profile page to see points, previous posts/reactions, etc.
 @app.route('/profile')
 @login_required
 def profile():
     user_id = current_user.id  # Use Flask-Login's current_user
 
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
 
-    
     # Fetch total points
     cursor.execute("SELECT points FROM User WHERE userID = %s", (user_id,))  # Use %s for MySQL
     user = cursor.fetchone()
     total_points = user['points'] if user else 0
 
-
     # Fetch user suggestions
-    cursor.execute(
-        "SELECT description, createdDate, netVotes FROM Suggestion WHERE userID = %s",
-        (user_id,)
-    )
+    cursor.execute("""
+        SELECT 
+            description, createdDate, netVotes, userID,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'upvote') AS positiveVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'downvote') AS negativeVotes
+        FROM Suggestion 
+        WHERE userID = %s
+    """, (user_id,))
     suggestions = cursor.fetchall()
 
-    # Fetch emoji reactions
+    # Fetch today's emoji reaction (if any)
     cursor.execute(
-        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s",
-        (user_id,)
-    )
-    emoji_reactions = cursor.fetchall()
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
+        (user_id,))
+    todays_reaction = cursor.fetchone()
 
-    # Fetch votes made by user
+    # Fetch emoji reactions from the past week, excluding today's reaction
     cursor.execute(
-        "SELECT voteType, suggestionID, VotedDate FROM Vote WHERE userID = %s",
-        (user_id,)
-    )
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND submissiondate >= CURDATE() - INTERVAL 7 DAY AND DATE(submissiondate) < CURDATE()",
+        (user_id,))
+    last_week_reactions = cursor.fetchall()
+
+    # Fetch votes made by user and the suggestion they voted on
+    cursor.execute("""
+        SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
+        FROM Vote v
+        JOIN Suggestion s ON v.suggestionID = s.suggestionID
+    """,)
     votes_given = cursor.fetchall()
-
 
     cursor.close()  # Close the cursor after use
     conn.close()
@@ -189,19 +192,20 @@ def profile():
         'profile.html',
         total_points=total_points,
         suggestions=suggestions,
-        emoji_reactions=emoji_reactions,
+        todays_reaction=todays_reaction,
+        last_week_reactions=last_week_reactions,
         votes_given=votes_given
     )
 
 
-# Zar:
-# Route to render the create account form
 
+# Zar: route to render the create account form
 @app.route('/createaccount', methods=['GET'])
 def createaccount_form():
     return render_template('createaccount.html')
 
-# Zar : Route to create a new user
+
+# Zar: route to create a new user
 @app.route('/createaccount', methods=['POST'])
 def createaccount():
     data = request.form  # Get form data
@@ -229,7 +233,7 @@ def createaccount():
         return jsonify({"error": "An error occurred. Please try again later."}), 500
 
 
-# Zar: Route to render the suggestions form
+# Zar: route to render the suggestions form
 @app.route('/suggestion', methods=['GET'])
 @login_required
 def suggestion_form():
@@ -248,7 +252,7 @@ def suggestion_form():
         return jsonify({"error": "An error occurred. Please try again later."}), 500
      
 
-# Zar : Route to suggestions
+# Zar: route to suggestions
 @app.route('/suggestion', methods=['POST'])
 @login_required
 def add_suggestion():
@@ -257,8 +261,10 @@ def add_suggestion():
     description = data.get("Description")
     comments = data.get("Comments") 
     created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
- 
- 
+
+   # if not user_id or not description:
+   #     return jsonify({"error": user_id}), 400
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor() 
@@ -284,7 +290,8 @@ def add_suggestion():
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Function to update a suggestion
+
+# Zar: function to update a suggestion
 def update_suggestion(suggestion_id, description=None, comments=None):
     query = "UPDATE Suggestion SET "
     updates = []
@@ -307,7 +314,8 @@ def update_suggestion(suggestion_id, description=None, comments=None):
     cursor.close()
     conn.close()
 
-# Function to delete a suggestion
+
+# Zar: function to delete a suggestion
 def delete_suggestion(suggestion_id):
     conn = get_db_connection()
     cursor = conn.cursor()
