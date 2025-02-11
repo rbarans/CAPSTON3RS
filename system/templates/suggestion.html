@@ -21,11 +21,11 @@
             <table>
                 <tr>
                     <td><label for="Description">Suggestion:</label></td>
-                    <td><textarea type="text"  id="Description" name="Description" required></textarea></td>
+                    <td><textarea type="text" rows="3" id="Description" name="Description" required></textarea></td>
                 </tr>
                 <tr>
                     <td><label for="Comments">Comments:</label></td>
-                    <td><textarea type="text" id="Comments" name="Comments"></textarea></td>
+                    <td><textarea type="text" rows="3" id="Comments" name="Comments"></textarea></td>
                 </tr>
 
                 <tr>
@@ -36,12 +36,10 @@
                     </td>
                 </tr>
             </table>
-        </form>
-
-        <h2>Suggestions List</h2>
+        </form> 
 
         <!-- Suggestions Table -->
-        <table>
+        <table class="suggestion-table">
             <tr>
                 <th>Suggestion</th> 
                 <th>Created Date</th>
@@ -54,7 +52,7 @@
                 <td>
                     <form id="deleteForm" method="POST">
                         <input type="hidden" name="SuggestionID" value="{{ suggestion.SuggestionID }}">
-                        <button type="submit" class="delete-btn">Delete</button>
+                        <button type="submit" class="action-button">Delete</button>
                     </form>
                 </td>
             </tr>
