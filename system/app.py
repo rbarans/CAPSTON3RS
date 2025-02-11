@@ -233,10 +233,12 @@ def createaccount():
 @app.route('/suggestion', methods=['GET'])
 @login_required
 def suggestion_form():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Suggestions")
+        cursor.execute("SELECT * FROM Suggestion WHERE userID=%s", (user_id,))
         suggestions = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -256,10 +258,7 @@ def add_suggestion():
     comments = data.get("Comments") 
     created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
  
-
-   # if not user_id or not description:
-   #     return jsonify({"error": user_id}), 400
-
+ 
     try:
         conn = get_db_connection()
         cursor = conn.cursor() 
@@ -272,7 +271,14 @@ def add_suggestion():
         conn.commit()
         cursor.close()
         conn.close()
-        return cursor.lastrowid
+       
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Suggestion WHERE userID=%s", (user_id,))
+        suggestions = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return render_template('suggestion.html', suggestions=suggestions)
     except Exception as e:
         # Log the error
         print(f"Error: {e}")
