@@ -313,4 +313,4 @@ def delete_suggestion(suggestion_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
