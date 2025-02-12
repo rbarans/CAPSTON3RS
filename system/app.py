@@ -182,7 +182,8 @@ def profile():
         SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
         FROM Vote v
         JOIN Suggestion s ON v.suggestionID = s.suggestionID
-    """,)
+        WHERE v.userID = %s  
+    """,(user_id,))  # Jacob - Added where clause to display votes for current user instead of all users
     votes_given = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
@@ -328,7 +329,39 @@ def del_suggestion():
         print(f"Error: {e}")
         #return jsonify({"error": str(e)}), 500
         return jsonify({"error": "The suggestion has been voted on and can no longer be deleted."}), 500
+    
 
+#Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
+# TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
+@app.route('/voting_view')
+@login_required
+def voting_view():
+    filter_type = request.args.get('filter', 'newest')  # Default filter is "newest"
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Sorting logic based on filter
+    if filter_type == 'newest':
+        cursor.execute("SELECT * FROM Suggestion ORDER BY CreatedDate DESC")
+    elif filter_type == 'trending':
+        cursor.execute("""
+            SELECT s.*, 
+                   (SELECT COUNT(*) FROM Vote WHERE suggestionID = s.suggestionID) AS totalVotes
+            FROM Suggestion s
+            ORDER BY totalVotes DESC
+        """)
+    elif filter_type == 'status':
+        cursor.execute("SELECT * FROM Suggestion ORDER BY StatusID")  
+    else:
+        cursor.execute("SELECT * FROM Suggestion")  
+
+    suggestions = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("voting_view.html", suggestions=suggestions, filter_type=filter_type)
   
 if __name__ == '__main__':
     app.run(debug=True)

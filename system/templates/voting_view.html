@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<head>
+    <title>Voting View</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Voting View</h1>
+
+        <!-- Filter Dropdown -->
+        <label for="filter">Sort by:</label>
+        <select id="filter" onchange="applyFilter()">
+            <option value="newest" {% if filter_type == 'newest' %}selected{% endif %}>Newest</option>
+            <option value="trending" {% if filter_type == 'trending' %}selected{% endif %}>Trending</option>
+            <option value="status" {% if filter_type == 'status' %}selected{% endif %}>Status</option>
+        </select>
+
+        <!-- Suggestions Table -->
+        <table class="suggestion-table">
+            <tr>
+                <th>Suggestion</th>
+                <th>Comments</th>
+                <th>Created Date</th>
+                <th>Status</th>
+            </tr>
+            {% for suggestion in suggestions %}
+            <tr class="clickable-row" data-index="{{ loop.index0 }}">
+                <td>{{ suggestion.Description }}</td>
+                <td>{{ suggestion.Comments }}</td>
+                <td>{{ suggestion.CreatedDate }}</td>
+                <td>{{ suggestion.StatusID }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="suggestionModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✖</button>
+            <p id="suggestionText"></p>
+            <p id="suggestionComments"></p>
+            <div class="modal-navigation">
+                <button onclick="prevSuggestion()">← Previous</button>
+                <button onclick="nextSuggestion()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store JSON Data in Hidden Div to Avoid Jinja Escape Issues -->
+    <div id="suggestion-data" data-suggestions='{{ suggestions | tojson | safe }}'></div>
+
+    <script>
+        // Get suggestions from the hidden div data attribute
+        let suggestions = JSON.parse(document.getElementById("suggestion-data").dataset.suggestions);
+        let currentIndex = 0;
+
+        // Apply filter selection
+        function applyFilter() {
+            let selectedFilter = document.getElementById("filter").value;
+            window.location.href = "/voting_view?filter=" + selectedFilter;
+        }
+
+        // Attach click event to table rows
+        document.querySelectorAll(".clickable-row").forEach((row) => {
+            row.addEventListener("click", function () {
+                let index = parseInt(row.dataset.index);
+                openModal(index);
+            });
+        });
+
+        function openModal(index) {
+            currentIndex = index;
+            updateModal();
+            document.getElementById("suggestionModal").style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("suggestionModal").style.display = "none";
+        }
+
+        function updateModal() {
+            if (suggestions.length > 0) {
+                document.getElementById("suggestionText").innerText = suggestions[currentIndex].Description;
+                document.getElementById("suggestionComments").innerText = "Comments: " + (suggestions[currentIndex].Comments || "None");
+            }
+        }
+
+        function prevSuggestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateModal();
+            }
+        }
+
+        function nextSuggestion() {
+            if (currentIndex < suggestions.length - 1) {
+                currentIndex++;
+                updateModal();
+            }
+        }
+    </script>
+</body>
+{% endblock %}
