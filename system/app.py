@@ -277,14 +277,8 @@ def add_suggestion():
         conn.commit()
         cursor.close()
         conn.close()
-       
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Suggestion WHERE userID=%s", (user_id,))
-        suggestions = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return render_template('suggestion.html', suggestions=suggestions)
+    
+        return jsonify({"message": "Suggestion added successfully"}), 200
     except Exception as e:
         # Log the error
         print(f"Error: {e}")
@@ -316,25 +310,25 @@ def update_suggestion(suggestion_id, description=None, comments=None):
 
 
 # Zar: function to delete a suggestion
-def delete_suggestion(suggestion_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+@app.route('/delete_suggestion', methods=['POST'])
+def del_suggestion():
+    suggestion_id = request.form.get('SuggestionID')
+    if not suggestion_id:
+        return jsonify({"error": "SuggestionID is required"}), 400
 
-# # Example usage
-# if __name__ == "__main__":
-#     # Adding a new suggestion
-#     suggestion_id = add_suggestion(1, "New feature request", "Needs approval", 1, "2025-02-09 12:00:00")
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "Suggestion deleted successfully"}), 200
+    except Exception as e:
+        print(f"Error: {e}")
+        #return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "The suggestion has been voted on and can no longer be deleted."}), 500
 
-#     # Updating the suggestion
-#     update_suggestion(suggestion_id, comments="Reviewed by manager", status_id=2)
-
-#     # Deleting the suggestion
-#     delete_suggestion(suggestion_id)
-
-
+  
 if __name__ == '__main__':
     app.run(debug=True)
