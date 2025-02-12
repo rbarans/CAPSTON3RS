@@ -14,11 +14,11 @@
 <body>
 
     <div class="navbar">
-        <h2>Survey App</h2>
+        <span class="title">Survey App</span>
 
         <a href="/" class="nav-link">Home</a>
         {% if current_user.is_authenticated %}
-            <a href="{{ url_for('add_suggestion') }}" class="nav-link">Suggestion</a>
+            <a href="{{ url_for('add_suggestion') }}" class="nav-link">Post Suggestion</a>
             <a href="{{ url_for('profile') }}" class="nav-link">My Profile</a>
             <a href="{{ url_for('logout') }}" class="nav-link">Log Out</a>
         {% else %}

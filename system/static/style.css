@@ -73,6 +73,15 @@ h1 {
     padding-top: 10px;
 }
 
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    float: left;
+}
+
 .survey-button {
     background-color: #ff7575;
     color: white;
@@ -150,6 +159,7 @@ textarea {
 } 
 
 /* Navigation Bar */
+ 
 .navbar {
     background-color: #ffffff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -159,6 +169,24 @@ textarea {
     align-items: center;
 }
 
+.nav-link{
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.3s ease; 
+    text-decoration: none;
+    padding: 12px 20px;
+    margin: 0 10px; 
+    display: inline-block; 
+    border-radius: 5px; /* Rounded corners */
+    }
+
+.nav-link:hover {
+        background-color: pink; 
+        color: #0073e6; /* Blue text */
+        cursor: pointer;
+    }
+
+
 .app-title {
     font-size: 1.5rem;
     font-weight: 600;
@@ -166,17 +194,7 @@ textarea {
 }
 
  
-.nav-link {
-    color: #3498db;
-    text-decoration: none;
-    transition: color 0.3s ease;
-    padding-right: 1.5rem;
-}
-
-.nav-link:hover {
-    color: #2980b9;
-}
-
+ 
  
 .section-title {
     font-size: 1.3rem;
