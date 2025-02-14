@@ -303,47 +303,119 @@ textarea {
 
 /* ========================= Voting View Page ========================= */
 
-/* Table Styling */
-.voting-table {
-    width: 100%;
-    border-collapse: collapse;
+/* Card Layout */
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
     margin-top: 20px;
 }
 
-.voting-table th, 
-.voting-table td {
-    padding: 12px;
-    border: 1px solid #ddd;
-    text-align: center;
+.suggestion-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 320px;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.voting-table th {
-    background-color: #f8f9fa;
-    color: #050316;
+.suggestion-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.card-header h3 {
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+/* Card Body */
+.card-body p {
+    font-size: 0.9rem;
+    margin: 5px 0;
+    color: #333;
+}
+
+/* ========================= Status Labels ========================= */
+
+.status-label {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-transform: uppercase;
+}
+
+.status-unlikely {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-possible {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-implemented {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* ========================= Voting Buttons ========================= */
+
+.vote-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.upvote, .downvote {
+    background-color: transparent;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.upvote {
+    border: 2px solid #16bb0e;
+    color: #16bb0e;
+}
+
+.downvote {
+    border: 2px solid #ff7575;
+    color: #ff7575;
+}
+
+.upvote:hover, .upvote.voted {
+    background-color: #16bb0e;
+    color: white;
+}
+
+.downvote:hover, .downvote.voted {
+    background-color: #ff7575;
+    color: white;
+}
+
+.upvote span, .downvote span {
+    margin-left: 5px;
     font-weight: bold;
 }
 
-.voting-table tr:hover {
-    background-color: #f1f1f1;
-    cursor: pointer;
-}
+/* ========================= Lightbox Modal ========================= */
 
-/* Filter Dropdown */
-.filter-container {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.filter-dropdown {
-    padding: 10px;
-    font-size: 1rem;
-    border: 1px solid #bdc3c7;
-    border-radius: 5px;
-    background-color: white;
-    cursor: pointer;
-}
-
-/* Lightbox Modal */
 .modal {
     display: none;
     position: fixed;
@@ -367,31 +439,24 @@ textarea {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Close Button */
 .modal-close {
     position: absolute;
-    top: 1px;
-    right: 10px;
-    font-size: 20px;
-    font-weight: normal;
+    top: 10px;
+    right: 15px;
+    font-size: 30px;
     cursor: pointer;
     color: #ff7575;
     background: none;
     border: none;
-    outline: none;
-    padding: 5px; 
-    width: 30px; 
-    height: 30px; 
-    text-align: center;
-    line-height: 20px; 
 }
 
 .modal-close:hover {
     color: #e692b7;
-    background-color: rgba(0, 0, 0, 0.1); 
-    border-radius: 50%; 
 }
 
-/* Navigation Buttons Inside Lightbox */
+/* ========================= Lightbox Navigation ========================= */
+
 .modal-navigation {
     display: flex;
     justify-content: space-between;
@@ -412,7 +477,38 @@ textarea {
     background-color: #e692b7;
 }
 
-/* Responsive Design */
+/* Highlight selected vote */
+.voted {
+    background-color: #ff7575;
+    color: white;
+    border: 2px solid #ff7575;
+}
+
+/* ========================= Vote Confirmation ========================= */
+
+.vote-confirmation {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    z-index: 1000;
+    opacity: 0.9;
+    animation: fadeOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; }
+}
+
+/* ========================= Responsive Design ========================= */
+
 @media (max-width: 768px) {
     .modal-content {
         width: 80%;
@@ -422,5 +518,9 @@ textarea {
     .modal-navigation button {
         padding: 8px 15px;
         font-size: 0.9rem;
+    }
+
+    .suggestion-card {
+        width: 90%;
     }
 }

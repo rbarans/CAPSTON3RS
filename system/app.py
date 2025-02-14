@@ -158,8 +158,8 @@ def profile():
     cursor.execute("""
         SELECT 
             description, createdDate, netVotes, userID,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'upvote') AS positiveVotes,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 'downvote') AS negativeVotes
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
         FROM Suggestion 
         WHERE userID = %s
     """, (user_id,))
@@ -336,32 +336,132 @@ def del_suggestion():
 @app.route('/voting_view')
 @login_required
 def voting_view():
-    filter_type = request.args.get('filter', 'newest')  # Default filter is "newest"
+    filter_type = request.args.get('filter', 'newest')
+    user_id = current_user.id  # Get logged-in user's ID
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Sorting logic based on filter
-    if filter_type == 'newest':
-        cursor.execute("SELECT * FROM Suggestion ORDER BY CreatedDate DESC")
-    elif filter_type == 'trending':
-        cursor.execute("""
-            SELECT s.*, 
-                   (SELECT COUNT(*) FROM Vote WHERE suggestionID = s.suggestionID) AS totalVotes
+    # Calculate vote totals & determine status
+    query = """
+        WITH VoteSummary AS (
+            SELECT 
+                s.SuggestionID,
+                s.Description,
+                s.Comments,
+                s.CreatedDate,
+                COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS PositiveVote,
+                COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS NegativeVote,
+                (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
+                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes
             FROM Suggestion s
-            ORDER BY totalVotes DESC
-        """)
-    elif filter_type == 'status':
-        cursor.execute("SELECT * FROM Suggestion ORDER BY StatusID")  
-    else:
-        cursor.execute("SELECT * FROM Suggestion")  
+            LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
+            GROUP BY s.SuggestionID
+        )
+        SELECT 
+            vs.SuggestionID,
+            vs.Description,
+            vs.Comments,
+            vs.CreatedDate,
+            vs.PositiveVote,
+            vs.NegativeVote,
+            vs.NetVotes,
+            (SELECT StatusName FROM Status st WHERE vs.NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) AS StatusName,
+            (SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = vs.SuggestionID LIMIT 1) AS UserVote
+        FROM VoteSummary vs
+    """
 
+    # Apply filters
+    if filter_type == 'newest':
+        query += " ORDER BY vs.CreatedDate DESC"
+    elif filter_type == 'trending':
+        query += " ORDER BY vs.NetVotes DESC"
+    elif filter_type == 'status':
+        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely')"
+
+    cursor.execute(query, (user_id,))
     suggestions = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
     return render_template("voting_view.html", suggestions=suggestions, filter_type=filter_type)
+
+
+# Route to handle voting
+@app.route('/vote', methods=['POST'])
+@login_required
+def vote():
+    suggestion_id = request.form.get('suggestion_id')
+    vote_type = request.form.get('vote_type')
+
+    if not suggestion_id or vote_type not in ['upvote', 'downvote']:
+        return jsonify({'error': 'Invalid request'}), 400
+
+    user_id = current_user.id
+    vote_value = 1 if vote_type == 'upvote' else 0  # Assigning 0 for downvotes
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Check if user already voted
+    cursor.execute("SELECT * FROM Vote WHERE UserID = %s AND SuggestionID = %s", (user_id, suggestion_id))
+    existing_vote = cursor.fetchone()
+
+    if existing_vote:
+        cursor.execute(
+            "UPDATE Vote SET VoteType = %s WHERE UserID = %s AND SuggestionID = %s",
+            (vote_value, user_id, suggestion_id)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO Vote (UserID, SuggestionID, VoteType) VALUES (%s, %s, %s)",
+            (user_id, suggestion_id, vote_value)
+        )
+
+    conn.commit()
+
+    # Fetch updated vote counts
+    cursor.execute(
+        "SELECT SUM(CASE WHEN VoteType = 1 THEN 1 ELSE 0 END) AS PositiveVote, "
+        "SUM(CASE WHEN VoteType = 0 THEN 1 ELSE 0 END) AS NegativeVote "
+        "FROM Vote WHERE SuggestionID = %s",
+        (suggestion_id,)
+    )
+    vote_counts = cursor.fetchone()
+
+    # Fetch the updated status
+    cursor.execute(
+        """
+        SELECT StatusName FROM Status
+        WHERE Threshold <= (
+            SELECT (SUM(CASE WHEN VoteType = 1 THEN 1 ELSE 0 END) - 
+                    SUM(CASE WHEN VoteType = 0 THEN 1 ELSE 0 END))
+            FROM Vote WHERE SuggestionID = %s
+        )
+        ORDER BY Threshold DESC
+        LIMIT 1
+        """,
+        (suggestion_id,)
+    )
+    status = cursor.fetchone()
+    new_status = status['StatusName'] if status else "Unknown"
+
+    # Update status in Suggestion table
+    cursor.execute(
+        "UPDATE Suggestion SET StatusID = (SELECT StatusID FROM Status WHERE StatusName = %s LIMIT 1) WHERE SuggestionID = %s",
+        (new_status, suggestion_id)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        'new_upvotes': vote_counts['PositiveVote'] or 0,
+        'new_downvotes': vote_counts['NegativeVote'] or 0,
+        'new_status': new_status
+    })
   
 if __name__ == '__main__':
     app.run(debug=True)

@@ -10,38 +10,71 @@
         <h1>Voting View</h1>
 
         <!-- Filter Dropdown -->
-        <label for="filter">Sort by:</label>
-        <select id="filter" onchange="applyFilter()">
-            <option value="newest" {% if filter_type == 'newest' %}selected{% endif %}>Newest</option>
-            <option value="trending" {% if filter_type == 'trending' %}selected{% endif %}>Trending</option>
-            <option value="status" {% if filter_type == 'status' %}selected{% endif %}>Status</option>
-        </select>
+        <div class="filter-container">
+            <label for="filter">Sort by:</label>
+            <select id="filter" onchange="applyFilter()">
+                <option value="newest" {% if filter_type == 'newest' %}selected{% endif %}>Newest</option>
+                <option value="trending" {% if filter_type == 'trending' %}selected{% endif %}>Trending</option>
+                <option value="status" {% if filter_type == 'status' %}selected{% endif %}>Status</option>
+            </select>
+        </div>
 
-        <!-- Suggestions Table -->
-        <table class="suggestion-table">
-            <tr>
-                <th>Suggestion</th>
-                <th>Comments</th>
-                <th>Created Date</th>
-                <th>Status</th>
-            </tr>
+        <!-- Suggestions Card View -->
+        <div class="card-container">
             {% for suggestion in suggestions %}
-            <tr class="clickable-row" data-index="{{ loop.index0 }}">
-                <td>{{ suggestion.Description }}</td>
-                <td>{{ suggestion.Comments }}</td>
-                <td>{{ suggestion.CreatedDate }}</td>
-                <td>{{ suggestion.StatusID }}</td>
-            </tr>
+            <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}">
+                <div class="card-header">
+                    <h3>{{ suggestion.Description }}</h3>
+                    <p class="status-label status-{{ suggestion.StatusName | lower | replace(' ', '-') }}">
+                        Status: <span id="status-{{ suggestion.SuggestionID }}">{{ suggestion.StatusName or "Unknown" }}</span>
+                    </p>
+                </div>
+                <div class="card-body">
+                    <p><strong>Comments:</strong> {{ suggestion.Comments }}</p>
+                    <p><strong>Created Date:</strong> {{ suggestion.CreatedDate }}</p>
+
+                    <!-- Voting Section -->
+                    <div class="vote-buttons">
+                        <button class="upvote {% if suggestion.UserVote == 1 %}voted{% endif %}" 
+                            id="upvote-btn-{{ suggestion.SuggestionID }}" 
+                            onclick="castVote('{{ suggestion.SuggestionID }}', 'upvote')">
+                            👍 <span id="upvote-{{ suggestion.SuggestionID }}">{{ suggestion.PositiveVote or 0 }}</span>
+                        </button>
+                        
+                        <button class="downvote {% if suggestion.UserVote == 0 %}voted{% endif %}" 
+                            id="downvote-btn-{{ suggestion.SuggestionID }}" 
+                            onclick="castVote('{{ suggestion.SuggestionID }}', 'downvote')">
+                            👎 <span id="downvote-{{ suggestion.SuggestionID }}">{{ suggestion.NegativeVote or 0 }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
-        </table>
+        </div>
     </div>
+
+    <!-- Vote Confirmation Message -->
+    <div id="vote-confirmation" class="vote-confirmation hidden">Your vote has been recorded!</div>
 
     <!-- Lightbox Modal -->
     <div id="suggestionModal" class="modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">✖</button>
-            <p id="suggestionText"></p>
-            <p id="suggestionComments"></p>
+            <h2 id="modalTitle"></h2>
+            <p id="modalDescription"></p>
+            <p id="modalComments"></p>
+            <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+
+            <!-- Voting in Lightbox -->
+            <div class="modal-vote-buttons">
+                <button class="upvote" onclick="castVoteFromModal('upvote')">👍 
+                    <span id="modalUpvoteCount">0</span>
+                </button>
+                <button class="downvote" onclick="castVoteFromModal('downvote')">👎 
+                    <span id="modalDownvoteCount">0</span>
+                </button>
+            </div>
+
             <div class="modal-navigation">
                 <button onclick="prevSuggestion()">← Previous</button>
                 <button onclick="nextSuggestion()">Next →</button>
@@ -49,11 +82,10 @@
         </div>
     </div>
 
-    <!-- Store JSON Data in Hidden Div to Avoid Jinja Escape Issues -->
+    <!-- Store JSON Data in Hidden Div -->
     <div id="suggestion-data" data-suggestions='{{ suggestions | tojson | safe }}'></div>
 
     <script>
-        // Get suggestions from the hidden div data attribute
         let suggestions = JSON.parse(document.getElementById("suggestion-data").dataset.suggestions);
         let currentIndex = 0;
 
@@ -63,10 +95,10 @@
             window.location.href = "/voting_view?filter=" + selectedFilter;
         }
 
-        // Attach click event to table rows
-        document.querySelectorAll(".clickable-row").forEach((row) => {
-            row.addEventListener("click", function () {
-                let index = parseInt(row.dataset.index);
+        // Attach click event to open modal
+        document.querySelectorAll(".suggestion-card").forEach((card) => {
+            card.addEventListener("click", function () {
+                let index = parseInt(card.dataset.index);
                 openModal(index);
             });
         });
@@ -83,8 +115,12 @@
 
         function updateModal() {
             if (suggestions.length > 0) {
-                document.getElementById("suggestionText").innerText = suggestions[currentIndex].Description;
-                document.getElementById("suggestionComments").innerText = "Comments: " + (suggestions[currentIndex].Comments || "None");
+                let currentSuggestion = suggestions[currentIndex];
+                document.getElementById("modalTitle").innerText = currentSuggestion.Description;
+                document.getElementById("modalDescription").innerText = "Comments: " + (currentSuggestion.Comments || "None");
+                document.getElementById("modalStatus").innerText = currentSuggestion.StatusName || "Unknown";
+                document.getElementById("modalUpvoteCount").innerText = currentSuggestion.PositiveVote || 0;
+                document.getElementById("modalDownvoteCount").innerText = currentSuggestion.NegativeVote || 0;
             }
         }
 
@@ -101,6 +137,62 @@
                 updateModal();
             }
         }
+
+        function castVote(suggestionId, voteType) {
+            fetch('/vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ 'suggestion_id': suggestionId, 'vote_type': voteType })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    return;
+                }
+
+                // Store vote selection
+                localStorage.setItem(`voted-${suggestionId}`, voteType);
+
+                // Update UI instantly
+                document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+
+                // Highlight the selected vote button
+                document.getElementById(`upvote-btn-${suggestionId}`).classList.toggle("voted", voteType === 'upvote');
+                document.getElementById(`downvote-btn-${suggestionId}`).classList.toggle("voted", voteType === 'downvote');
+
+                // Show confirmation message
+                let confirmation = document.getElementById("vote-confirmation");
+                confirmation.classList.remove("hidden");
+
+                // Reload after 1 second
+                setTimeout(() => {
+                    confirmation.classList.add("hidden");
+                }, 1000);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function castVoteFromModal(voteType) {
+            let suggestionId = suggestions[currentIndex].SuggestionID;
+            castVote(suggestionId, voteType);
+        }
+
+        // Highlight user's previous vote
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".suggestion-card").forEach((card) => {
+                let suggestionId = card.dataset.id;
+                let votedType = localStorage.getItem(`voted-${suggestionId}`);
+
+                if (votedType === 'upvote') {
+                    document.getElementById(`upvote-btn-${suggestionId}`).classList.add("voted");
+                } else if (votedType === 'downvote') {
+                    document.getElementById(`downvote-btn-${suggestionId}`).classList.add("voted");
+                }
+            });
+        });
     </script>
 </body>
 {% endblock %}
