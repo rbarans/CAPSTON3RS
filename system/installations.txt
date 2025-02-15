@@ -2,6 +2,8 @@
 
 # Install flask: 'pip install Flask' in terminal 
 
+# Install Turbo-flask: 'pip install turbo-flask' in terminal
+
 # Install flask_login: 'pip install flask_login' in terminal 
     # if it doesnt work, type '& ' and place your file path in quotes followed by '-m pip install flask_login'
 
