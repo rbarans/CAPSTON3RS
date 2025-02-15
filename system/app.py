@@ -2,9 +2,12 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 from datetime import datetime
+from turbo_flask import Turbo
 
 
 app = Flask(__name__)
+app.config['TURBO_USE_CDN'] = True
+turbo = Turbo(app)
 profile_bp = Blueprint('profile', __name__)
 
 
@@ -141,18 +144,17 @@ def rate_day():
 
     return redirect(url_for('login'))
 
-
-@app.route('/profile')
+# Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     user_id = current_user.id  # Use Flask-Login's current_user
 
-    # Get filter parameters from the request
+    # Get filter parameters from the request, if any
     suggestion_filter = request.args.get('suggestion_filter', '')  # Default to empty string
-    keyword = request.args.get('keyword', '')  # Keyword search for filtering suggestions
+    suggestion_keyword = request.args.get('suggestion_keyword', '')  # Keyword search for filtering suggestions
     vote_filter = request.args.get('vote_filter', '')  # Default to empty string
-    vote_keyword = request.args.get('vote_keyword', '')  # Keyword search for filtering suggestions
-
+    vote_keyword = request.args.get('vote_keyword', '')  # Keyword search for filtering votes
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
@@ -170,9 +172,9 @@ def profile():
             (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
         FROM Suggestion 
         WHERE userID = %s
-
     """
- # Apply filters based on the selected filter option
+
+    # Apply filters based on the selected filter option
     if suggestion_filter == 'today':
         suggestion_query += " AND DATE(createdDate) = CURDATE()"
     elif suggestion_filter == 'yesterday':
@@ -183,22 +185,26 @@ def profile():
         suggestion_query += " ORDER BY netVotes DESC"
     elif suggestion_filter == 'lowest_net_votes':
         suggestion_query += " ORDER BY netVotes ASC"
-    elif suggestion_filter == 'keyword' and keyword:
+    elif suggestion_filter == 'suggestion_keyword' and suggestion_keyword:
         suggestion_query += " AND description LIKE %s"
-        cursor.execute(suggestion_query, (user_id, f'%{keyword}%'))
+        cursor.execute(suggestion_query, (user_id, f'%{suggestion_keyword}%'))
         suggestions = cursor.fetchall()
+
         cursor.close()  # Close the cursor after use
         conn.close()
+
         return render_template(
             'profile.html',
             total_points=total_points,
             suggestions=suggestions,
-            keyword=keyword,
-            suggestion_filter=suggestion_filter
+            suggestion_keyword=suggestion_keyword,
+            suggestion_filter=suggestion_filter,
+            vote_filter=vote_filter,
+            vote_keyword=vote_keyword
         )
 
     # Execute the query and fetch the results
-    if suggestion_filter != 'keyword':
+    if suggestion_filter != 'suggestion_keyword':
         cursor.execute(suggestion_query, (user_id,))
     suggestions = cursor.fetchall()
 
@@ -221,7 +227,8 @@ def profile():
         JOIN Suggestion s ON v.suggestionID = s.suggestionID
         WHERE v.userID = %s
     """
-# Apply vote filters
+
+    # Apply vote filters
     if vote_filter == 'today':
         vote_query += " AND DATE(v.VotedDate) = CURDATE()"
     elif vote_filter == 'yesterday':
@@ -232,23 +239,27 @@ def profile():
         vote_query += " AND v.voteType = 1"
     elif vote_filter == 'no':
         vote_query += " AND v.voteType = 0"
-    elif vote_filter == 'keyword' and vote_keyword:
+    elif vote_filter == 'vote_keyword' and vote_keyword:
         vote_query += " AND s.description LIKE %s"
         cursor.execute(vote_query, (user_id, f'%{vote_keyword}%'))
         votes_given = cursor.fetchall()
+
         cursor.close()  # Close the cursor after use
         conn.close()
+
         return render_template(
             'profile.html',
             total_points=total_points,
             suggestions=suggestions,
             vote_filter=vote_filter,
             vote_keyword=vote_keyword,
-            votes_given=votes_given
+            votes_given=votes_given,
+            suggestion_filter=suggestion_filter,
+            suggestion_keyword=suggestion_keyword
         )
 
     # Execute vote query
-    if vote_filter != 'keyword':
+    if vote_filter != 'vote_keyword':
         cursor.execute(vote_query, (user_id,))
     votes_given = cursor.fetchall()
 
@@ -258,14 +269,15 @@ def profile():
     return render_template(
         'profile.html',
         total_points=total_points,
-        todays_reaction=todays_reaction,
-        last_week_reactions=last_week_reactions,
         suggestions=suggestions,
         vote_filter=vote_filter,
         vote_keyword=vote_keyword,
+        suggestion_filter=suggestion_filter,
+        suggestion_keyword=suggestion_keyword,
+        todays_reaction=todays_reaction,
+        last_week_reactions=last_week_reactions,
         votes_given=votes_given
     )
-
 
 
 # Zar: route to render the create account form

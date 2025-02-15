@@ -1,0 +1,9 @@
+<div id="votesSection">
+    {% for vote in votes_given %}
+        <div class="vote-item">
+            <p>Description: {{ vote.description }}</p>
+            <p>Vote Type: {% if vote.voteType == 1 %}Yes{% else %}No{% endif %}</p>
+            <p>Voted on: {{ vote.VotedDate }}</p>
+        </div>
+    {% endfor %}
+</div>

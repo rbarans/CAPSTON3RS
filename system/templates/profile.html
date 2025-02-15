@@ -13,15 +13,15 @@
         <p><strong>Total Points:</strong> {{ total_points }}</p>
 
         <h2>My Suggestions</h2>
-        <form method="GET" action="{{ url_for('profile') }}">
-            <label for="suggestion_filter">Filter: </label>
-            <select id="suggestion_filter" name="suggestion_filter" onchange="applySuggestionsFilter()">
-                <option value="">All</option>
-                <option value="today" {% if request.args.get('suggestion_filter') == 'today' %} selected {% endif %}>Posted Today</option>
-                <option value="yesterday" {% if request.args.get('suggestion_filter') == 'yesterday' %} selected {% endif %}>Posted Yesterday</option>
-                <option value="last_week" {% if request.args.get('suggestion_filter') == 'last_week' %} selected {% endif %}>Posted in the Last Week</option>
-                <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>With Highest Net Votes</option>
-                <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>With Lowest Net Votes</option>
+        <form method="get" action="{{ url_for('profile') }}">
+            <label for="suggestion_filter">Filter Suggestions:</label>
+            <select name="suggestion_filter" id="suggestion_filter">
+                <option value="" {% if suggestion_filter == '' %}selected{% endif %}>All</option>
+                <option value="today" {% if suggestion_filter == 'today' %}selected{% endif %}>Today</option>
+                <option value="yesterday" {% if suggestion_filter == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                <option value="last_week" {% if suggestion_filter == 'last_week' %}selected{% endif %}>Last Week</option>
+                <option value="highest_net_votes" {% if suggestion_filter == 'highest_net_votes' %}selected{% endif %}>Highest Net Votes</option>
+                <option value="lowest_net_votes" {% if suggestion_filter == 'lowest_net_votes' %}selected{% endif %}>Lowest Net Votes</option>
                 <option value="keyword" {% if request.args.get('suggestion_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
             </select>
             <input type="text" name="keyword" placeholder="Enter keyword" value="{{ request.args.get('keyword', '') }}" {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %} />
@@ -29,7 +29,7 @@
         </form>
         
 
-        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
+        <div id="suggestionsSection" style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
             {% for suggestion in suggestions %}
             <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
                         position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
@@ -96,10 +96,10 @@
 
         <h2 id="my-votes">My Votes</h2>
 
-        <form action="#my-votes" method="GET" action="{{ url_for('profile') }}">
-            <label for="vote_filter">Filter: </label>
-            <select id="vote_filter" name="vote_filter" onchange="applyVotesFilter()">
-                <option value="">All</option>
+        <form method="get" action="{{ url_for('profile') }}">
+            <label for="vote_filter">Filter Votes:</label>
+            <select name="vote_filter" id="vote_filter">
+<option value="">All</option>
                 <option value="today" {% if request.args.get('vote_filter') == 'today' %} selected {% endif %}>Voted Today</option>
                 <option value="yesterday" {% if request.args.get('vote_filter') == 'yesterday' %} selected {% endif %}>Voted Yesterday</option>
                 <option value="last_week" {% if request.args.get('vote_filter') == 'last_week' %} selected {% endif %}>Voted in the Last Week</option>
@@ -109,10 +109,9 @@
             </select>
             <input type="text" name="vote_keyword" placeholder="Enter keyword" value="{{ request.args.get('vote_keyword', '') }}" {% if request.args.get('vote_filter') != 'keyword' %} style="display:none;" {% endif %} />
             <button type="submit">Apply Filter</button>
-            
 
 
-        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
+        <div id="votesSection" style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
             {% if votes_given %}
                 {% for vote in votes_given %}
                 <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 

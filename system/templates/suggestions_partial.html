@@ -1,0 +1,10 @@
+<div id="suggestionsSection">
+    {% for suggestion in suggestions %}
+        <div class="suggestion-item">
+            {{ suggestion.description }} <!-- Render description -->
+            <p>Positive Votes: {{ suggestion.positiveVotes }}</p>
+            <p>Negative Votes: {{ suggestion.negativeVotes }}</p>
+            <p>Net Votes: {{ suggestion.netVotes }}</p>
+        </div>
+    {% endfor %}
+</div>
