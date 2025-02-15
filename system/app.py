@@ -140,29 +140,64 @@ def rate_day():
     return redirect(url_for('login'))
 
 
-# Rana: Route to profile page to see points, previous posts/reactions, etc.
 @app.route('/profile')
 @login_required
 def profile():
     user_id = current_user.id  # Use Flask-Login's current_user
 
+    # Get filter parameters from the request
+    suggestion_filter = request.args.get('suggestion_filter', '')  # Default to empty string
+    keyword = request.args.get('keyword', '')  # Keyword search for filtering suggestions
+    vote_filter = request.args.get('vote_filter', '')  # Default to empty string
+    vote_keyword = request.args.get('vote_keyword', '')  # Keyword search for filtering suggestions
+
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
 
     # Fetch total points
-    cursor.execute("SELECT points FROM User WHERE userID = %s", (user_id,))  # Use %s for MySQL
+    cursor.execute("SELECT points FROM User WHERE userID = %s", (user_id,))
     user = cursor.fetchone()
     total_points = user['points'] if user else 0
 
-    # Fetch user suggestions
-    cursor.execute("""
+    # Build dynamic query for filtering suggestions
+    suggestion_query = """
         SELECT 
             description, createdDate, netVotes, userID,
             (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
             (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
         FROM Suggestion 
         WHERE userID = %s
-    """, (user_id,))
+
+    """
+ # Apply filters based on the selected filter option
+    if suggestion_filter == 'today':
+        suggestion_query += " AND DATE(createdDate) = CURDATE()"
+    elif suggestion_filter == 'yesterday':
+        suggestion_query += " AND DATE(createdDate) = CURDATE() - INTERVAL 1 DAY"
+    elif suggestion_filter == 'last_week':
+        suggestion_query += " AND createdDate >= CURDATE() - INTERVAL 7 DAY"
+    elif suggestion_filter == 'highest_net_votes':
+        suggestion_query += " ORDER BY netVotes DESC"
+    elif suggestion_filter == 'lowest_net_votes':
+        suggestion_query += " ORDER BY netVotes ASC"
+    elif suggestion_filter == 'keyword' and keyword:
+        suggestion_query += " AND description LIKE %s"
+        cursor.execute(suggestion_query, (user_id, f'%{keyword}%'))
+        suggestions = cursor.fetchall()
+        cursor.close()  # Close the cursor after use
+        conn.close()
+        return render_template(
+            'profile.html',
+            total_points=total_points,
+            suggestions=suggestions,
+            keyword=keyword,
+            suggestion_filter=suggestion_filter
+        )
+
+    # Execute the query and fetch the results
+    if suggestion_filter != 'keyword':
+        cursor.execute(suggestion_query, (user_id,))
     suggestions = cursor.fetchall()
 
     # Fetch today's emoji reaction (if any)
@@ -177,13 +212,42 @@ def profile():
         (user_id,))
     last_week_reactions = cursor.fetchall()
 
-    # Fetch votes made by user and the suggestion they voted on
-    cursor.execute("""
+    # Build dynamic query for filtering votes given
+    vote_query = """
         SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
         FROM Vote v
         JOIN Suggestion s ON v.suggestionID = s.suggestionID
-        WHERE v.userID = %s  
-    """,(user_id,))  # Jacob - Added where clause to display votes for current user instead of all users
+        WHERE v.userID = %s
+    """
+# Apply vote filters
+    if vote_filter == 'today':
+        vote_query += " AND DATE(v.VotedDate) = CURDATE()"
+    elif vote_filter == 'yesterday':
+        vote_query += " AND DATE(v.VotedDate) = CURDATE() - INTERVAL 1 DAY"
+    elif vote_filter == 'last_week':
+        vote_query += " AND v.VotedDate >= CURDATE() - INTERVAL 7 DAY"
+    elif vote_filter == 'yes':
+        vote_query += " AND v.voteType = 1"
+    elif vote_filter == 'no':
+        vote_query += " AND v.voteType = 0"
+    elif vote_filter == 'keyword' and vote_keyword:
+        vote_query += " AND s.description LIKE %s"
+        cursor.execute(vote_query, (user_id, f'%{vote_keyword}%'))
+        votes_given = cursor.fetchall()
+        cursor.close()  # Close the cursor after use
+        conn.close()
+        return render_template(
+            'profile.html',
+            total_points=total_points,
+            suggestions=suggestions,
+            vote_filter=vote_filter,
+            vote_keyword=vote_keyword,
+            votes_given=votes_given
+        )
+
+    # Execute vote query
+    if vote_filter != 'keyword':
+        cursor.execute(vote_query, (user_id,))
     votes_given = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
@@ -192,9 +256,11 @@ def profile():
     return render_template(
         'profile.html',
         total_points=total_points,
-        suggestions=suggestions,
         todays_reaction=todays_reaction,
         last_week_reactions=last_week_reactions,
+        suggestions=suggestions,
+        vote_filter=vote_filter,
+        vote_keyword=vote_keyword,
         votes_given=votes_given
     )
 
