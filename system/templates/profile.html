@@ -14,19 +14,20 @@
 
         <h2>My Suggestions</h2>
         <form method="GET" action="{{ url_for('profile') }}">
-            <label for="suggestion_filter">Filter Suggestions: </label>
-            <select id="suggestion_filter" name="suggestion_filter">
+            <label for="suggestion_filter">Filter: </label>
+            <select id="suggestion_filter" name="suggestion_filter" onchange="applySuggestionsFilter()">
                 <option value="">All</option>
                 <option value="today" {% if request.args.get('suggestion_filter') == 'today' %} selected {% endif %}>Posted Today</option>
                 <option value="yesterday" {% if request.args.get('suggestion_filter') == 'yesterday' %} selected {% endif %}>Posted Yesterday</option>
-                <option value="last_week" {% if request.args.get('suggestion_filter') == 'last_week' %} selected {% endif %}>Posted Last Week</option>
-                <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>Highest Net Votes</option>
-                <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>Lowest Net Votes</option>
-                <option value="keyword" {% if request.args.get('suggestion_filter') == 'keyword' %} selected {% endif %}>Search by Keyword</option>
+                <option value="last_week" {% if request.args.get('suggestion_filter') == 'last_week' %} selected {% endif %}>Posted in the Last Week</option>
+                <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>With Highest Net Votes</option>
+                <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>With Lowest Net Votes</option>
+                <option value="keyword" {% if request.args.get('suggestion_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
             </select>
             <input type="text" name="keyword" placeholder="Enter keyword" value="{{ request.args.get('keyword', '') }}" {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %} />
             <button type="submit">Apply Filter</button>
         </form>
+        
 
         <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
             {% for suggestion in suggestions %}
@@ -96,19 +97,19 @@
         <h2 id="my-votes">My Votes</h2>
 
         <form action="#my-votes" method="GET" action="{{ url_for('profile') }}">
-            <label for="vote_filter">Filter Votes: </label>
-            <select id="vote_filter" name="vote_filter">
+            <label for="vote_filter">Filter: </label>
+            <select id="vote_filter" name="vote_filter" onchange="applyVotesFilter()">
                 <option value="">All</option>
                 <option value="today" {% if request.args.get('vote_filter') == 'today' %} selected {% endif %}>Voted Today</option>
                 <option value="yesterday" {% if request.args.get('vote_filter') == 'yesterday' %} selected {% endif %}>Voted Yesterday</option>
-                <option value="last_week" {% if request.args.get('vote_filter') == 'last_week' %} selected {% endif %}>Voted Last Week</option>
-                <option value="yes" {% if request.args.get('vote_filter') == 'yes' %} selected {% endif %}>Yes Votes</option>
-                <option value="no" {% if request.args.get('vote_filter') == 'no' %} selected {% endif %}>No Votes</option>
-                <option value="keyword" {% if request.args.get('vote_filter') == 'keyword' %} selected {% endif %}>Search by Keyword</option>
+                <option value="last_week" {% if request.args.get('vote_filter') == 'last_week' %} selected {% endif %}>Voted in the Last Week</option>
+                <option value="yes" {% if request.args.get('vote_filter') == 'yes' %} selected {% endif %}>Voted 'Yes'</option>
+                <option value="no" {% if request.args.get('vote_filter') == 'no' %} selected {% endif %}>Voted 'No'</option>
+                <option value="keyword" {% if request.args.get('vote_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
             </select>
             <input type="text" name="vote_keyword" placeholder="Enter keyword" value="{{ request.args.get('vote_keyword', '') }}" {% if request.args.get('vote_filter') != 'keyword' %} style="display:none;" {% endif %} />
             <button type="submit">Apply Filter</button>
-        </form>
+            
 
 
         <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
@@ -147,7 +148,7 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <p style="text-align: center; font-size: 18px; color: #333;">You have not voted yet.</p>
+                <p style="text-align: center; font-size: 18px; color: #333;">No votes found.</p>
             {% endif %}
         </div>
     </div>
@@ -163,6 +164,32 @@
             element.style.display = "none";
         }
     }
+
+    function applySuggestionsFilter() {
+        const filterValue = document.getElementById('suggestion_filter').value;
+        const keywordInput = document.querySelector('input[name="keyword"]');
+        
+        // If "Search by Keyword" is selected, show the keyword input field
+        if (filterValue === 'keyword') {
+            keywordInput.style.display = 'inline';
+        } else {
+            keywordInput.style.display = 'none';
+        }
+    }
+    
+    function applyVotesFilter() {
+        const filterValue = document.getElementById('vote_filter').value;
+        const keywordInput = document.querySelector('input[name="vote_keyword"]');
+        
+        // If "Search by Keyword" is selected, show the keyword input field
+        if (filterValue === 'keyword') {
+            keywordInput.style.display = 'inline';
+        } else {
+            keywordInput.style.display = 'none';
+        }
+    }
+</script>
+
 </script>
 
 {% endblock %}

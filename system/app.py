@@ -3,8 +3,10 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 from datetime import datetime
 
+
 app = Flask(__name__)
 profile_bp = Blueprint('profile', __name__)
+
 
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem to persist session data
 app.config['SESSION_PERMANENT'] = True
