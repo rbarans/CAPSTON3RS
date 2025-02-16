@@ -24,14 +24,14 @@
             {% for suggestion in suggestions %}
             <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}">
                 <div class="card-header">
-                    <h3>{{ suggestion.Description }}</h3>
                     <p class="status-label status-{{ suggestion.StatusName | lower | replace(' ', '-') }}">
                         Status: <span id="status-{{ suggestion.SuggestionID }}">{{ suggestion.StatusName or "Unknown" }}</span>
-                    </p>
-                </div>
+                    </p></div>
                 <div class="card-body">
-                    <p><strong>Comments:</strong> {{ suggestion.Comments }}</p>
-                    <p><strong>Created Date:</strong> {{ suggestion.CreatedDate }}</p>
+                    <p><strong>Title:</strong> {{ suggestion.Description }}</p>
+                    <a href="javascript:void(0);" class="view-details" data-index="{{ loop.index0 }}">
+                        <weak>Click to View Details</weak>
+                    </a>
 
                     <!-- Voting Section -->
                     <div class="vote-buttons">
@@ -61,9 +61,11 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">✖</button>
             <h2 id="modalTitle"></h2>
-            <p id="modalDescription"></p>
+            <p><strong>Description:</strong> <span id="modalDescription"></p>
             <p id="modalComments"></p>
             <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+            <p><strong>Created Date:</strong><span id="modalDate"></span></p>
+
 
             <!-- Voting in Lightbox -->
             <div class="modal-vote-buttons">
@@ -96,9 +98,10 @@
         }
 
         // Attach click event to open modal
-        document.querySelectorAll(".suggestion-card").forEach((card) => {
-            card.addEventListener("click", function () {
-                let index = parseInt(card.dataset.index);
+        document.querySelectorAll(".view-details").forEach((link) => {
+            link.addEventListener("click", function (event) {
+                event.stopPropagation();
+                let index = parseInt(link.dataset.index);
                 openModal(index);
             });
         });
@@ -117,10 +120,28 @@
             if (suggestions.length > 0) {
                 let currentSuggestion = suggestions[currentIndex];
                 document.getElementById("modalTitle").innerText = currentSuggestion.Description;
-                document.getElementById("modalDescription").innerText = "Comments: " + (currentSuggestion.Comments || "None");
+                document.getElementById("modalDescription").innerText = (currentSuggestion.Comments || "None");
                 document.getElementById("modalStatus").innerText = currentSuggestion.StatusName || "Unknown";
                 document.getElementById("modalUpvoteCount").innerText = currentSuggestion.PositiveVote || 0;
                 document.getElementById("modalDownvoteCount").innerText = currentSuggestion.NegativeVote || 0;
+                document.getElementById("modalDate").innerText =" " + currentSuggestion.CreatedDate;
+                // Get modal vote buttons
+                const modalUpvote = document.querySelector(".modal-vote-buttons .upvote");
+                const modalDownvote = document.querySelector(".modal-vote-buttons .downvote");
+
+                // Reset previous highlight
+                modalUpvote.classList.remove("votedyes", "voted");
+                modalDownvote.classList.remove("votedno", "voted");
+
+                // Retrieve user's previous vote from local storage
+                let votedType = localStorage.getItem(`voted-${currentSuggestion.SuggestionID}`);
+
+                // Apply highlighting to the modal buttons if a previous vote exists
+                if (votedType === 'upvote') {
+                    modalUpvote.classList.add("votedyes", "voted");
+                } else if (votedType === 'downvote') {
+                    modalDownvote.classList.add("votedno", "voted");
+                }
             }
         }
 
@@ -146,6 +167,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Vote response:", data); // Debugging
                 if (data.error) {
                     alert("Error: " + data.error);
                     return;
@@ -159,39 +181,96 @@
                 document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
                 document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
 
-                // Highlight the selected vote button
-                document.getElementById(`upvote-btn-${suggestionId}`).classList.toggle("voted", voteType === 'upvote');
-                document.getElementById(`downvote-btn-${suggestionId}`).classList.toggle("voted", voteType === 'downvote');
+                // Get buttons in both card and modal
+                const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
+                const downvoteButton = document.getElementById(`downvote-btn-${suggestionId}`);
+                const modalUpvote = document.querySelector(`.modal-vote-buttons .upvote`);
+                const modalDownvote = document.querySelector(`.modal-vote-buttons .downvote`);
+
+                // Reset all vote buttons before applying a new vote
+                upvoteButton.classList.remove("votedyes", "voted");
+                downvoteButton.classList.remove("votedno", "voted");
+                modalUpvote.classList.remove("votedyes", "voted");
+                modalDownvote.classList.remove("votedno", "voted");
+
+                // Apply the new highlight to the selected vote
+                if (voteType === 'upvote') {
+                    upvoteButton.classList.add("votedyes", "voted");
+                    modalUpvote.classList.add("votedyes", "voted");
+                } else if (voteType === 'downvote') {
+                    downvoteButton.classList.add("votedno", "voted");
+                    modalDownvote.classList.add("votedno", "voted");
+                }
 
                 // Show confirmation message
                 let confirmation = document.getElementById("vote-confirmation");
                 confirmation.classList.remove("hidden");
 
-                // Reload after 1 second
+                console.log("Reloading page..."); // Debugging
+
+                localStorage.setItem("voteSuccess", "true");
+
+
+                // Reload after 100 ms
                 setTimeout(() => {
-                    confirmation.classList.add("hidden");
-                }, 1000);
+                    location.reload();
+                }, 100);
             })
             .catch(error => console.error('Error:', error));
         }
 
         function castVoteFromModal(voteType) {
             let suggestionId = suggestions[currentIndex].SuggestionID;
+            localStorage.setItem("openModalIndex", currentIndex);
             castVote(suggestionId, voteType);
         }
 
         // Highlight user's previous vote
         document.addEventListener("DOMContentLoaded", function () {
+            if (localStorage.getItem("voteSuccess") === "true") {
+                let confirmation = document.getElementById("vote-confirmation");
+                confirmation.classList.remove("hidden");
+
+                // Keep message visible for 1.5 seconds, then hide it
+                setTimeout(() => {
+                    confirmation.classList.add("hidden");
+                    localStorage.removeItem("voteSuccess"); // Clear flag
+                }, 1500);
+            }
+             // Reopen modal if it was open before reload
+            let savedIndex = localStorage.getItem("openModalIndex");
+            if (savedIndex !== null) {
+                openModal(parseInt(savedIndex));
+                localStorage.removeItem("openModalIndex"); // Clear flag
+            }
             document.querySelectorAll(".suggestion-card").forEach((card) => {
                 let suggestionId = card.dataset.id;
                 let votedType = localStorage.getItem(`voted-${suggestionId}`);
 
                 if (votedType === 'upvote') {
-                    document.getElementById(`upvote-btn-${suggestionId}`).classList.add("voted");
+                    document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes");
                 } else if (votedType === 'downvote') {
-                    document.getElementById(`downvote-btn-${suggestionId}`).classList.add("voted");
+                    document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno");
                 }
             });
+            if (savedIndex !== null) {
+                let suggestionId = suggestions[parseInt(savedIndex)].SuggestionID;
+                let votedType = localStorage.getItem(`voted-${suggestionId}`);
+
+                const modalUpvote = document.querySelector(".modal-vote-buttons .upvote");
+                const modalDownvote = document.querySelector(".modal-vote-buttons .downvote");
+
+                // Reset any previous highlighting
+                modalUpvote.classList.remove("votedyes", "voted");
+                modalDownvote.classList.remove("votedno", "voted");
+
+                // Apply the correct highlight
+                if (votedType === 'upvote') {
+                    modalUpvote.classList.add("votedyes", "voted");
+                } else if (votedType === 'downvote') {
+                    modalDownvote.classList.add("votedno", "voted");
+                }
+            }
         });
     </script>
 </body>
