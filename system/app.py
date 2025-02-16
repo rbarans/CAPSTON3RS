@@ -180,9 +180,11 @@ def profile():
     # Build dynamic query for filtering suggestions
     suggestion_query = """
         SELECT 
-           description, createdDate, netVotes, userID,
+           description, createdDate, userID,
             (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) -
+                (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS netVotes
         FROM Suggestion 
         WHERE userID = %s
     """
