@@ -180,15 +180,12 @@ def profile():
     # Build dynamic query for filtering suggestions
     suggestion_query = """
         SELECT 
-            s.description, s.createdDate, s.userID,
-            COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS positiveVotes,
-            COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS negativeVotes,
-            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
-                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS netVotes 
-        FROM Suggestion s
-        LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
-        WHERE s.userID = %s
-    """ # Jacob - Had to restructure votes queries as netVotes weren't displaying correctly
+           description, createdDate, netVotes, userID,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
+        FROM Suggestion 
+        WHERE userID = %s
+    """
 
     # Apply filters based on the selected filter option
     params = [user_id]  # Initialize with user_id
