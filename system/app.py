@@ -448,7 +448,8 @@ def voting_view():
     return render_template("voting_view.html", suggestions=suggestions, filter_type=filter_type)
 
 
-# Route to handle voting
+# Jacob: Route to handle voting
+# Rana: some changes to update Suggestion table as well
 @app.route('/vote', methods=['POST'])
 @login_required
 def vote():
@@ -459,63 +460,90 @@ def vote():
         return jsonify({'error': 'Invalid request'}), 400
 
     user_id = current_user.id
-    vote_value = 1 if vote_type == 'upvote' else 0  # Assigning 0 for downvotes
+    vote_value = 1 if vote_type == 'upvote' else 0  # 1 for upvote, 0 for downvote
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Check if user already voted
-    cursor.execute("SELECT * FROM Vote WHERE UserID = %s AND SuggestionID = %s", (user_id, suggestion_id))
-    existing_vote = cursor.fetchone()
+    try:
+        conn.start_transaction()
 
-    if existing_vote:
-        cursor.execute(
-            "UPDATE Vote SET VoteType = %s WHERE UserID = %s AND SuggestionID = %s",
-            (vote_value, user_id, suggestion_id)
-        )
-    else:
-        cursor.execute(
-            "INSERT INTO Vote (UserID, SuggestionID, VoteType) VALUES (%s, %s, %s)",
-            (user_id, suggestion_id, vote_value)
-        )
+        # Check if the user already voted
+        cursor.execute("SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = %s", (user_id, suggestion_id))
+        existing_vote = cursor.fetchone()
 
-    conn.commit()
+        if existing_vote:
+            previous_vote = existing_vote['VoteType']
+            if previous_vote != vote_value:
+                # Remove previous vote count before updating
+                update_suggestion_query = """
+                    UPDATE Suggestion
+                    SET 
+                        PositiveVote = PositiveVote - IF(%s = 1, 1, 0),
+                        NegativeVote = NegativeVote - IF(%s = 0, 1, 0),
+                        NetVotes = NetVotes - IF(%s = 1, 1, -1)
+                    WHERE SuggestionID = %s
+                """
+                cursor.execute(update_suggestion_query, (previous_vote, previous_vote, previous_vote, suggestion_id))
 
-    # Fetch updated vote counts
-    cursor.execute(
-        "SELECT SUM(CASE WHEN VoteType = 1 THEN 1 ELSE 0 END) AS PositiveVote, "
-        "SUM(CASE WHEN VoteType = 0 THEN 1 ELSE 0 END) AS NegativeVote "
-        "FROM Vote WHERE SuggestionID = %s",
-        (suggestion_id,)
-    )
-    vote_counts = cursor.fetchone()
+            # Update the vote
+            cursor.execute(
+                "UPDATE Vote SET VoteType = %s WHERE UserID = %s AND SuggestionID = %s",
+                (vote_value, user_id, suggestion_id)
+            )
+        else:
+            # Insert new vote
+            cursor.execute(
+                "INSERT INTO Vote (UserID, SuggestionID, VoteType) VALUES (%s, %s, %s)",
+                (user_id, suggestion_id, vote_value)
+            )
 
-    # Fetch the updated status
-    cursor.execute(
+        # Update the Suggestion table with new vote counts
+        update_suggestion_query = """
+            UPDATE Suggestion
+            SET 
+                PositiveVote = PositiveVote + IF(%s = 1, 1, 0),
+                NegativeVote = NegativeVote + IF(%s = 0, 1, 0),
+                NetVotes = (PositiveVote + IF(%s = 1, 1, 0)) - (NegativeVote + IF(%s = 0, 1, 0))
+            WHERE SuggestionID = %s
         """
-        SELECT StatusName FROM Status
-        WHERE Threshold <= (
-            SELECT (SUM(CASE WHEN VoteType = 1 THEN 1 ELSE 0 END) - 
-                    SUM(CASE WHEN VoteType = 0 THEN 1 ELSE 0 END))
-            FROM Vote WHERE SuggestionID = %s
-        )
-        ORDER BY Threshold DESC
-        LIMIT 1
-        """,
-        (suggestion_id,)
-    )
-    status = cursor.fetchone()
-    new_status = status['StatusName'] if status else "Unknown"
+        cursor.execute(update_suggestion_query, (vote_value, vote_value, vote_value, vote_value, suggestion_id))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        # Fetch updated vote counts
+        cursor.execute(
+            "SELECT PositiveVote, NegativeVote, NetVotes FROM Suggestion WHERE SuggestionID = %s",
+            (suggestion_id,)
+        )
+        vote_counts = cursor.fetchone()
+
+        # Fetch the updated status
+        cursor.execute(
+            """
+            SELECT StatusName FROM Status
+            WHERE Threshold <= %s
+            ORDER BY Threshold DESC
+            LIMIT 1
+            """,
+            (vote_counts['NetVotes'],)
+        )
+        status = cursor.fetchone()
+        new_status = status['StatusName'] if status else "Unknown"
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
     return jsonify({
         'new_upvotes': vote_counts['PositiveVote'] or 0,
         'new_downvotes': vote_counts['NegativeVote'] or 0,
+        'net_votes': vote_counts['NetVotes'] or 0,
         'new_status': new_status
     })
+
   
 if __name__ == '__main__':
     app.run(debug=True)
