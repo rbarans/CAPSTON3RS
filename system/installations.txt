@@ -7,7 +7,7 @@
 # Install flask_login: 'pip install flask_login' in terminal 
     # if it doesnt work, type '& ' and place your file path in quotes followed by '-m pip install flask_login'
 
-    # to find file path:
+    # to find file path, run:
     #    import sys
     #    print(sys.executable)
 
