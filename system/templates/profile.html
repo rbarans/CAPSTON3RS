@@ -43,9 +43,10 @@
         <br><br>
 
         <h2 id="my-suggestions">My Suggestions</h2>
+    <!-- <form  method="GET"> -->
     <div>
 
-    <form method="GET" >
+    <form  method="GET" >
 
         <label for="suggestion_filter">Suggestion Filter: </label>
         <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()" >
@@ -178,9 +179,17 @@
         }
     }
 
+    function submitFilter() {
+        // Get current scroll position to keep it
+        var currentScroll = window.scrollY;
 
+        // Submit the form
+        this.form.submit()
 
-
+        // Ensure the page returns to the same scroll position
+        // window.location.hash = 'my-suggestions';  // Add or update the hash to preserve the scroll position
+        window.scrollTo(0, currentScroll);  // Keep the page's scroll position intact
+    }
 </script>
 
 
