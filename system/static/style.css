@@ -316,14 +316,9 @@ h2 {
 /* Card Header */
 .card-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 10px;
-}
-
-.card-header h3 {
-    font-size: 1.2rem;
-    margin: 0;
 }
 
 /* Card Body */
@@ -428,8 +423,8 @@ h2 {
 /* Close Button */
 .modal-close {
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 20px;
+    right: 20px;
     font-size: 30px;
     cursor: pointer;
     color: #ff7575;
@@ -464,10 +459,28 @@ h2 {
 }
 
 /* Highlight selected vote */
-.voted {
+/* Applied when a user has voted */
+.votedyes, .upvote.voted {
+    background-color: #16bb0e;
+    color: white;
+    border: 2px solid #16bb0e;
+}
+
+.votedno, .downvote.voted {
     background-color: #ff7575;
     color: white;
     border: 2px solid #ff7575;
+}
+
+/* Ensure it applies in the modal */
+.modal-vote-buttons .upvote.voted {
+    background-color: #16bb0e;
+    color: white;
+}
+
+.modal-vote-buttons .downvote.voted {
+    background-color: #ff7575;
+    color: white;
 }
 
 /* ========================= Vote Confirmation ========================= */

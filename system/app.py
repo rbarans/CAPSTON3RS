@@ -180,12 +180,15 @@ def profile():
     # Build dynamic query for filtering suggestions
     suggestion_query = """
         SELECT 
-            description, createdDate, netVotes, userID,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
-        FROM Suggestion 
-        WHERE userID = %s
-    """
+            s.description, s.createdDate, s.userID,
+            COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS positiveVotes,
+            COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS negativeVotes,
+            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
+                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS netVotes 
+        FROM Suggestion s
+        LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
+        WHERE s.userID = %s
+    """ # Jacob - Had to restructure votes queries as netVotes weren't displaying correctly
 
     # Apply filters based on the selected filter option
     params = [user_id]  # Initialize with user_id
@@ -410,7 +413,9 @@ def voting_view():
                 COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS PositiveVote,
                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS NegativeVote,
                 (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
-                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes
+                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes,
+                (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) + 
+                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS TotalVotes
             FROM Suggestion s
             LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
             GROUP BY s.SuggestionID
@@ -423,6 +428,7 @@ def voting_view():
             vs.PositiveVote,
             vs.NegativeVote,
             vs.NetVotes,
+            vs.TotalVotes,
             (SELECT StatusName FROM Status st WHERE vs.NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) AS StatusName,
             (SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = vs.SuggestionID LIMIT 1) AS UserVote
         FROM VoteSummary vs
@@ -432,9 +438,9 @@ def voting_view():
     if filter_type == 'newest':
         query += " ORDER BY vs.CreatedDate DESC"
     elif filter_type == 'trending':
-        query += " ORDER BY vs.NetVotes DESC"
+        query += " ORDER BY vs.TotalVotes DESC"
     elif filter_type == 'status':
-        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely')"
+        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), vs.NetVotes DESC"
 
     cursor.execute(query, (user_id,))
     suggestions = cursor.fetchall()
@@ -503,12 +509,6 @@ def vote():
     )
     status = cursor.fetchone()
     new_status = status['StatusName'] if status else "Unknown"
-
-    # Update status in Suggestion table
-    cursor.execute(
-        "UPDATE Suggestion SET StatusID = (SELECT StatusID FROM Status WHERE StatusName = %s LIMIT 1) WHERE SuggestionID = %s",
-        (new_status, suggestion_id)
-    )
 
     conn.commit()
     cursor.close()
