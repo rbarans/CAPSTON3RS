@@ -144,6 +144,7 @@ def rate_day():
 
     return redirect(url_for('login'))
 
+
 # Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -164,50 +165,6 @@ def profile():
     user = cursor.fetchone()
     total_points = user['points'] if user else 0
 
-    # Build dynamic query for filtering suggestions
-    suggestion_query = """
-        SELECT 
-            description, createdDate, netVotes, userID,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
-        FROM Suggestion 
-        WHERE userID = %s
-    """
-
-    # Apply filters based on the selected filter option
-    if suggestion_filter == 'today':
-        suggestion_query += " AND DATE(createdDate) = CURDATE()"
-    elif suggestion_filter == 'yesterday':
-        suggestion_query += " AND DATE(createdDate) = CURDATE() - INTERVAL 1 DAY"
-    elif suggestion_filter == 'last_week':
-        suggestion_query += " AND createdDate >= CURDATE() - INTERVAL 7 DAY"
-    elif suggestion_filter == 'highest_net_votes':
-        suggestion_query += " ORDER BY netVotes DESC"
-    elif suggestion_filter == 'lowest_net_votes':
-        suggestion_query += " ORDER BY netVotes ASC"
-    elif suggestion_filter == 'suggestion_keyword' and suggestion_keyword:
-        suggestion_query += " AND description LIKE %s"
-        cursor.execute(suggestion_query, (user_id, f'%{suggestion_keyword}%'))
-        suggestions = cursor.fetchall()
-
-        cursor.close()  # Close the cursor after use
-        conn.close()
-
-        return render_template(
-            'profile.html',
-            total_points=total_points,
-            suggestions=suggestions,
-            suggestion_keyword=suggestion_keyword,
-            suggestion_filter=suggestion_filter,
-            vote_filter=vote_filter,
-            vote_keyword=vote_keyword
-        )
-
-    # Execute the query and fetch the results
-    if suggestion_filter != 'suggestion_keyword':
-        cursor.execute(suggestion_query, (user_id,))
-    suggestions = cursor.fetchall()
-
     # Fetch today's emoji reaction (if any)
     cursor.execute(
         "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
@@ -220,6 +177,39 @@ def profile():
         (user_id,))
     last_week_reactions = cursor.fetchall()
 
+    # Build dynamic query for filtering suggestions
+    suggestion_query = """
+        SELECT 
+            description, createdDate, netVotes, userID,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
+            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
+        FROM Suggestion 
+        WHERE userID = %s
+    """
+
+    # Apply filters based on the selected filter option
+    params = [user_id]  # Initialize with user_id
+
+    # Apply filters based on the selected filter option
+    if suggestion_filter == 'today':
+        suggestion_query += " AND DATE(createdDate) = CURDATE()"
+    elif suggestion_filter == 'yesterday':
+        suggestion_query += " AND DATE(createdDate) = CURDATE() - INTERVAL 1 DAY"
+    elif suggestion_filter == 'last_week':
+        suggestion_query += " AND createdDate >= CURDATE() - INTERVAL 7 DAY"
+    elif suggestion_filter == 'highest_net_votes':
+        suggestion_query += " ORDER BY netVotes DESC"
+    elif suggestion_filter == 'lowest_net_votes':
+        suggestion_query += " ORDER BY netVotes ASC"
+    elif suggestion_filter == 'keyword' and suggestion_keyword:
+        suggestion_query += " AND description LIKE %s"
+        params.append(f'%{suggestion_keyword}%')  # Add the parameter only if keyword filter is used
+
+
+    cursor.execute(suggestion_query, tuple(params))  # Pass parameters as a tuple
+    suggestions = cursor.fetchall()
+
+
     # Build dynamic query for filtering votes given
     vote_query = """
         SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
@@ -227,6 +217,9 @@ def profile():
         JOIN Suggestion s ON v.suggestionID = s.suggestionID
         WHERE v.userID = %s
     """
+
+    # Apply vote filters
+    vote_params = [user_id]  # Initialize with user_id for votes query
 
     # Apply vote filters
     if vote_filter == 'today':
@@ -239,28 +232,12 @@ def profile():
         vote_query += " AND v.voteType = 1"
     elif vote_filter == 'no':
         vote_query += " AND v.voteType = 0"
-    elif vote_filter == 'vote_keyword' and vote_keyword:
+    elif vote_filter == 'keyword' and vote_keyword:
         vote_query += " AND s.description LIKE %s"
-        cursor.execute(vote_query, (user_id, f'%{vote_keyword}%'))
-        votes_given = cursor.fetchall()
-
-        cursor.close()  # Close the cursor after use
-        conn.close()
-
-        return render_template(
-            'profile.html',
-            total_points=total_points,
-            suggestions=suggestions,
-            vote_filter=vote_filter,
-            vote_keyword=vote_keyword,
-            votes_given=votes_given,
-            suggestion_filter=suggestion_filter,
-            suggestion_keyword=suggestion_keyword
-        )
+        vote_params.append(f'%{vote_keyword}%')  # Add the parameter only if keyword filter is used
 
     # Execute vote query
-    if vote_filter != 'vote_keyword':
-        cursor.execute(vote_query, (user_id,))
+    cursor.execute(vote_query, tuple(vote_params))  # Pass parameters as a tuple
     votes_given = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
