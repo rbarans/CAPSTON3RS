@@ -1,4 +1,4 @@
-/* General styles */
+/* Zar: General styles */
 
 body {
     font-family: Arial, sans-serif;
@@ -25,8 +25,7 @@ input {
 main {
     padding-bottom: 20px; /* Add space at the bottom so content doesn't overlap footer */
 }
-
-/*Zar */
+ 
 button
 {
     background-color: #ff7575;
@@ -55,8 +54,6 @@ button:hover {
     color: #2980b9;
     background: none;
 }
-
-/*  */
 
 .container {
     max-width: 1200px;
@@ -137,25 +134,6 @@ h1 {
 }
 .survey-nochangebutton:hover {
     background-color: #e692b7;
-}
-
-/* Zar */
-/* //////////////////////////////////////  */
- 
-.createaccount-table {
-    width:40%;
-    border-collapse: collapse;
-}
-
-.createaccount-table th,
-.createaccount-table td {
-    padding: 1rem;
-    text-align: left;
-}
-
-textarea {
-    resize: none; /* Prevent resizing */
-    width: 25rem; 
 } 
 
 /* Navigation Bar */
@@ -193,9 +171,6 @@ textarea {
     color: #2c3e50;
 }
 
- 
- 
- 
 .section-title {
     font-size: 1.3rem;
     color: #34495e;
@@ -204,7 +179,8 @@ textarea {
     border-bottom: 2px solid #ecf0f1;
 }
 
-/* Zar: Form Elements */
+/* Form Elements */
+
 .input-group {
     margin-bottom: 1.5rem;
 }
@@ -240,7 +216,27 @@ textarea {
     transition: background-color 0.3s ease;
 }
 
-/* Zar: Suggestions List */
+/* Create Account Page */
+
+.createaccount-table {
+    width:40%;
+    border-collapse: collapse;
+}
+
+.createaccount-table th,
+.createaccount-table td {
+    padding: 1rem;
+    text-align: left;
+}
+
+textarea {
+    resize: none; /* Prevent resizing */
+    width: 25rem; 
+} 
+
+
+/* Suggestions Management Page */
+
 .suggestions-list {
     background: white;
     border-radius: 8px;
@@ -258,7 +254,7 @@ textarea {
 {
     padding: 1rem;
     text-align: Center;
-    background-color: #f2f2f2;
+    background-color: #eef5ff;
     color:#050316;
     border-bottom: 2px solid #ecf0f1; 
     font-weight: 600;    
@@ -275,28 +271,18 @@ textarea {
     text-align: center !important;
 }
 
-  
+/* My Profile Page */
 
-/* Zar : Responsive Design */
-@media (max-width: 768px) {
-    .container {
-        margin: 2rem auto;
-        padding: 20px;
-    }
-
-    .suggestion-management {
-        padding: 1rem;
-    }
-
-    .suggestion-table th,
-    .suggestion-table td {
-        padding: 0.75rem;
-    }
-    textarea {
-        max-width: 300px;
-    }
+/* Section Headers */
+h2 {
+    background: #eef5ff;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: Left;
+    margin-bottom: 20px;
 }
-/* ////////////////////// */
+ 
+/* End of Zar */
 
 
 /* Jacob: View for Voting on Suggestions */
@@ -523,4 +509,24 @@ textarea {
     .suggestion-card {
         width: 90%;
     }
+    
+    /* Zar: Responsive Design */
+    .container {
+        margin: 2rem auto;
+        padding: 20px;
+    }
+
+    .suggestion-management {
+        padding: 1rem;
+    }
+
+    .suggestion-table th,
+    .suggestion-table td {
+        padding: 0.75rem;
+    }
+    textarea {
+        max-width: 300px;
+    }
+    /* End of Zar */
 }
+ 
