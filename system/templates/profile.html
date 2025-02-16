@@ -3,10 +3,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <head>
     <title>My Profile</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="container">
         <h1>My Profile</h1>
@@ -15,11 +17,13 @@
         <h2>My Emoji Reactions</h2>
         <!-- Display today's rating if available -->
         {% if todays_reaction %}
-            <p>Today's Rating: {{ selected_emoji }} 
-                {% if todays_reaction.emojirating == 1 %}😞{% elif todays_reaction.emojirating == 2 %}🙁{% elif todays_reaction.emojirating == 3 %}😐{% elif todays_reaction.emojirating == 4 %}🙂{% elif todays_reaction.emojirating == 5 %} 😁{% endif %}
-            </p>
+        <p>Today's Rating: {{ selected_emoji }}
+            {% if todays_reaction.emojirating == 1 %}😞{% elif todays_reaction.emojirating == 2 %}🙁{% elif
+            todays_reaction.emojirating == 3 %}😐{% elif todays_reaction.emojirating == 4 %}🙂{% elif
+            todays_reaction.emojirating == 5 %} 😁{% endif %}
+        </p>
         {% else %}
-            <p>No rating for today yet.</p>
+        <p>No rating for today yet.</p>
         {% endif %}
 
         <!-- Button to show last week's ratings -->
@@ -28,14 +32,16 @@
         <!-- Display last week's ratings excluding today's rating when the button is clicked -->
         <div id="last-week-ratings" style="display:none;">
             {% if last_week_reactions %}
-                <ul>
-                    {% for reaction in last_week_reactions %}
-                        {{ reaction.submissiondate.strftime('%m/%d/%Y') }} : {% if reaction.emojirating == 1 %}😞{% elif reaction.emojirating == 2 %}🙁{% elif reaction.emojirating == 3 %}😐{% elif reaction.emojirating == 4 %}🙂{% elif reaction.emojirating == 5 %}😁{% endif %}
-                        <br>
-                    {% endfor %}
-                </ul>
+            <ul>
+                {% for reaction in last_week_reactions %}
+                {{ reaction.submissiondate.strftime('%m/%d/%Y') }} : {% if reaction.emojirating == 1 %}😞{% elif
+                reaction.emojirating == 2 %}🙁{% elif reaction.emojirating == 3 %}😐{% elif reaction.emojirating == 4
+                %}🙂{% elif reaction.emojirating == 5 %}😁{% endif %}
+                <br>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>No ratings found for the previous week.</p>
+            <p>No ratings found for the previous week.</p>
             {% endif %}
         </div>
 
@@ -43,141 +49,176 @@
 
         <h2 id="my-suggestions">My Suggestions</h2>
 
-    <form  method="GET" >
-    
-        <div>
-        <label for="suggestion_filter">Suggestion Filter: </label>
-        <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()">
-            <option value="">All</option>
-            <option value="today" {% if request.args.get('suggestion_filter') == 'today' %} selected {% endif %}>Posted Today</option>
-            <option value="yesterday" {% if request.args.get('suggestion_filter') == 'yesterday' %} selected {% endif %}>Posted Yesterday</option>
-            <option value="last_week" {% if request.args.get('suggestion_filter') == 'last_week' %} selected {% endif %}>Posted in the Last Week</option>
-            <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>With Highest Net Votes</option>
-            <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>With Lowest Net Votes</option>
-            <option value="keyword" {% if request.args.get('suggestion_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
-        </select>
-        
-        <input type="text" name="suggestion_keyword" placeholder="Enter keyword" value="{{ request.args.get('suggestion_keyword', '') }}" {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %} />
-        <button type="submit" {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %}>Apply Filter</button>
-    </div>
-        
+        <form method="GET">
 
-    <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
-        {% if suggestions %}
-            {% for suggestion in suggestions %}
-            <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
-                        position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
-                
-                <!-- Top Left: "Me" -->
-                <span style="position: absolute; top: 5px; left: 10px; font-weight: bold;">
-                    Me
-                </span>        
-    
-                <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
-                <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
-                    {{ suggestion.createdDate.strftime('%m/%d/%Y') }}
-                    <br>
-                    {{ suggestion.createdDate.strftime('%I:%M %p') }}
-                </span>
-    
-                <!-- Bottom Middle: Description -->
-                <p style="margin-top: 40px; font-size: 18px; color: #333;">
-                    "{{ suggestion.description }}"
-                </p>
-    
-                <br>
-    
-                <!-- Display the vote counts at the bottom -->
-                <div class="vote-counts" style="display: flex; justify-content: space-around; margin-top: 15px; font-size: 14px; color: #333;">
-                    <span>Positive Votes: {{ suggestion.positiveVotes }}</span>
-                    <span>Negative Votes: {{ suggestion.negativeVotes }}</span>
-                    <span>Net Votes: {{ suggestion.netVotes }}</span>
-                </div>
-    
-            </div>
-            {% endfor %}
-        {% else %}
-            <p style="text-align: center; font-size: 18px; color: #333;">No suggestions found for this filter.</p>
-        {% endif %}
-    </div>
-    
-
-
-
-        <h2 id="my-votes">My Votes</h2>
             <div>
-                <label for="vote_filter">Vote Filter: </label>
-                <select id="vote_filter" name="vote_filter" onchange="this.form.submit()" >
+                <label for="suggestion_filter">Suggestion Filter: </label>
+                <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()">
                     <option value="">All</option>
-                    <option value="today" {% if request.args.get('vote_filter') == 'today' %} selected {% endif %}>Voted Today</option>
-                    <option value="yesterday" {% if request.args.get('vote_filter') == 'yesterday' %} selected {% endif %}>Voted Yesterday</option>
-                    <option value="last_week" {% if request.args.get('vote_filter') == 'last_week' %} selected {% endif %}>Voted in the Last Week</option>
-                    <option value="yes" {% if request.args.get('vote_filter') == 'yes' %} selected {% endif %}>Voted 'Yes'</option>
-                    <option value="no" {% if request.args.get('vote_filter') == 'no' %} selected {% endif %}>Voted 'No'</option>
-                    <option value="keyword" {% if request.args.get('vote_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
+                    <option value="today" {% if request.args.get('suggestion_filter')=='today' %} selected {% endif %}>
+                        Posted Today</option>
+                    <option value="yesterday" {% if request.args.get('suggestion_filter')=='yesterday' %} selected {%
+                        endif %}>Posted Yesterday</option>
+                    <option value="last_week" {% if request.args.get('suggestion_filter')=='last_week' %} selected {%
+                        endif %}>Posted in the Last Week</option>
+                    <option value="highest_net_votes" {% if request.args.get('suggestion_filter')=='highest_net_votes'
+                        %} selected {% endif %}>With Highest Net Votes</option>
+                    <option value="lowest_net_votes" {% if request.args.get('suggestion_filter')=='lowest_net_votes' %}
+                        selected {% endif %}>With Lowest Net Votes</option>
+                    <option value="keyword" {% if request.args.get('suggestion_filter')=='keyword' %} selected {% endif
+                        %}>Containing Keywords</option>
                 </select>
-                
-                <input type="text" name="vote_keyword" placeholder="Enter keyword" value="{{ request.args.get('vote_keyword', '') }}" {% if request.args.get('vote_filter') != 'keyword' %} style="display:none;" {% endif %} />
-                <button type="submit" {% if request.args.get('vote_filter') != 'keyword' %} style="display:none;" {% endif %}>Apply Filter</button>
+
+                <input type="text" name="suggestion_keyword" placeholder="Enter keyword"
+                    value="{{ request.args.get('suggestion_keyword', '') }}" {% if request.args.get('suggestion_filter')
+                    !='keyword' %} style="display:none;" {% endif %} />
+                <button type="submit" {% if request.args.get('suggestion_filter') !='keyword' %} style="display:none;"
+                    {% endif %}>Apply Filter</button>
             </div>
-    </form>
-        
 
 
-        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
-            {% if votes_given %}
-                {% for vote in votes_given %}
-                <div style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
-                            position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
-                    
-                    <!-- Top Left: "Me" or "Anonymous" -->
+            <div
+                style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
+                {% if suggestions %}
+                {% for suggestion in suggestions %}
+                <div
+                    style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
+                        position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
+
+                    <!-- Top Left: "Me" -->
                     <span style="position: absolute; top: 5px; left: 10px; font-weight: bold;">
-                        {% if vote.userID == current_user.id %} Me {% else %} Anonymous {% endif %}
-                    </span>        
+                        Me
+                    </span>
 
                     <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
                     <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
-                        {{ vote.CreatedDate.strftime('%m/%d/%Y') }}
+                        {{ suggestion.createdDate.strftime('%m/%d/%Y') }}
                         <br>
-                        {{ vote.CreatedDate.strftime('%I:%M %p') }}
+                        {{ suggestion.createdDate.strftime('%I:%M %p') }}
                     </span>
 
                     <!-- Bottom Middle: Description -->
                     <p style="margin-top: 40px; font-size: 18px; color: #333;">
-                        "{{ vote.description }}"
+                        "{{ suggestion.description }}"
                     </p>
 
-                    <!-- Bottom Middle: Vote Type -->
-                    <p style="margin-top: 40px; font-size: 14px; color: #333;">
-                        On {{vote.VotedDate.strftime('%m/%d/%Y') }} at {{ vote.VotedDate.strftime('%I:%M %p') }} I voted: 
-                        {% if vote.voteType == 1 %}
-                            <span style="color: green; font-weight: bold; font-style: italic;">YES</span>
-                        {% elif vote.voteType == 0 %}
-                            <span style="color: red; font-weight: bold; font-style: italic;">NO</span>
-                        {% endif %}
-                    </p>
+                    <br>
+
+                    <!-- Display the vote counts at the bottom -->
+                    <div class="vote-counts"
+                        style="display: flex; justify-content: space-around; margin-top: 15px; font-size: 14px; color: #333;">
+                        <span>Positive Votes: {{ suggestion.positiveVotes }}</span>
+                        <span>Negative Votes: {{ suggestion.negativeVotes }}</span>
+                        <span>Net Votes: {{ suggestion.netVotes }}</span>
+                    </div>
 
                 </div>
                 {% endfor %}
+                {% else %}
+                <p style="text-align: center; font-size: 18px; color: #333;">No suggestions found for this filter.</p>
+                {% endif %}
+            </div>
+
+
+
+
+            <h2 id="my-votes">My Votes</h2>
+            <div>
+                <label for="vote_filter">Vote Filter: </label>
+                <select id="vote_filter" name="vote_filter" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    <option value="today" {% if request.args.get('vote_filter')=='today' %} selected {% endif %}>Voted
+                        Today</option>
+                    <option value="yesterday" {% if request.args.get('vote_filter')=='yesterday' %} selected {% endif
+                        %}>Voted Yesterday</option>
+                    <option value="last_week" {% if request.args.get('vote_filter')=='last_week' %} selected {% endif
+                        %}>Voted in the Last Week</option>
+                    <option value="yes" {% if request.args.get('vote_filter')=='yes' %} selected {% endif %}>Voted 'Yes'
+                    </option>
+                    <option value="no" {% if request.args.get('vote_filter')=='no' %} selected {% endif %}>Voted 'No'
+                    </option>
+                    <option value="keyword" {% if request.args.get('vote_filter')=='keyword' %} selected {% endif %}>
+                        Containing Keywords</option>
+                </select>
+
+                <input type="text" name="vote_keyword" placeholder="Enter keyword"
+                    value="{{ request.args.get('vote_keyword', '') }}" {% if request.args.get('vote_filter') !='keyword'
+                    %} style="display:none;" {% endif %} />
+                <button type="submit" {% if request.args.get('vote_filter') !='keyword' %} style="display:none;" {%
+                    endif %}>Apply Filter</button>
+            </div>
+        </form>
+
+
+
+        <div
+            style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 10px 0;">
+            {% if votes_given %}
+            {% for vote in votes_given %}
+            <div
+                style="border: 1px solid #ccc; border-radius: 12px; padding: 15px; width: 45%; background-color: #f9f9f9; 
+                            position: relative; text-align: center; margin-bottom: 15px; box-shadow: 1px 1px 5px rgba(0,0,0,0.1);">
+
+                <!-- Top Left: "Me" or "Anonymous" -->
+                <span style="position: absolute; top: 5px; left: 10px; font-weight: bold;">
+                    {% if vote.userID == current_user.id %} Me {% else %} Anonymous {% endif %}
+                </span>
+
+                <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
+                <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
+                    {{ vote.CreatedDate.strftime('%m/%d/%Y') }}
+                    <br>
+                    {{ vote.CreatedDate.strftime('%I:%M %p') }}
+                </span>
+
+                <!-- Bottom Middle: Description -->
+                <p style="margin-top: 40px; font-size: 18px; color: #333;">
+                    "{{ vote.description }}"
+                </p>
+
+                <!-- Bottom Middle: Vote Type -->
+                <p style="margin-top: 40px; font-size: 14px; color: #333;">
+                    On {{vote.VotedDate.strftime('%m/%d/%Y') }} at {{ vote.VotedDate.strftime('%I:%M %p') }} I voted:
+                    {% if vote.voteType == 1 %}
+                    <span style="color: green; font-weight: bold; font-style: italic;">YES</span>
+                    {% elif vote.voteType == 0 %}
+                    <span style="color: red; font-weight: bold; font-style: italic;">NO</span>
+                    {% endif %}
+                </p>
+
+            </div>
+            {% endfor %}
             {% else %}
-                <p style="text-align: center; font-size: 18px; color: #333;">No votes found.</p>
+            <p style="text-align: center; font-size: 18px; color: #333;">No votes found.</p>
             {% endif %}
         </div>
     </div>
 
 
-<script>
-    // Toggle the visibility of last week's ratings
-    function toggleLastWeekRatings() {
-        var element = document.getElementById("last-week-ratings");
-        if (element.style.display === "none") {
-            element.style.display = "block";
-        } else {
-            element.style.display = "none";
+    <script>
+        // Toggle the visibility of last week's ratings
+        function toggleLastWeekRatings() {
+            var element = document.getElementById("last-week-ratings");
+            if (element.style.display === "none") {
+                element.style.display = "block";
+            } else {
+                element.style.display = "none";
+            }
         }
-    }
-</script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Restore the scroll position when the page loads
+            if (sessionStorage.getItem("scrollPosition")) {
+                window.scrollTo(0, sessionStorage.getItem("scrollPosition"));
+            }
+
+            // Save the scroll position before refreshing or navigating away
+            window.addEventListener("beforeunload", function () {
+                sessionStorage.setItem("scrollPosition", window.scrollY);
+            });
+        });
+    </script>
 
 
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

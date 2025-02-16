@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+<style>
+    .leaderboard {
+        width: 50%;
+        background: white;
+        margin: auto;
+        box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
+        padding: 20px;
+        border-radius: 10px;
+    }
+    table{
+       width: 100%;
+         border-collapse: collapse;
+    }
+    th, td{
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    th{
+        background-color: #f2f2f2;
+    }
+</style>
+<div class="leaderboard">
+    <h2>Leaderboard</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.score }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", funciton() {
+        const users = [
+            {username: "user1", score: 500},
+            {username: "user2", score: 400},
+            {username: "user3", score: 300},
+            {username: "user4", score: 200},
+            {username: "user5", score: 100},
+            {username: "user6", score: null},
+            {username: "user7", score: null}
+        ];
+
+        const leaderboardBody = document.getElementById("leaderboard-body");
+        users.forEach ((user, index)) => {
+            const row = document.createElement("tr");
+            const username = document.createElement("td");
+            const score = document.createElement("td");
+            username.textContent = user.username;
+            score.textContent = index < 5 ? user.score : "-";
+            row.appendChild(username);
+            row.appendChild(score);
+            leaderboardBody.appendChild(row);
+        
+        });
+    });
+</script>
+{% endblock %}

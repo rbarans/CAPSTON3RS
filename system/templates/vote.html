@@ -1,0 +1,98 @@
+<html lanvg="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+        }
+        .container {
+            width: 50%;
+            margin: auto;
+            padding: 20px;
+        }
+        .suggestion-box {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+        }
+        .buttons {
+            display: flex;
+            justify-self: space-around;
+        }
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #commentBox {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Vote Yes or No on These Work Suggestions</h2>
+        <div class="suggestion-box" id="suggestionBox"></div>
+        <div class="buttons">
+            <button onclick="vote('no')">❌ No</button>
+            <button onclick="vote('yes')">✅ Yes</button>
+        </div>
+        <div id="commentBox">
+            <h3>Comment</h3>
+            <textarea id="comment" rows="4" cols="50" placeholder="Comment feeddback here..."> </textarea>
+            <button onclick="submitComment()">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        const suggesitons = [
+            'Should we increase lunch break to 1 hour?',
+            'Should we have a company picnic?',
+            'Should we have a company retreat?',
+        ];
+        let currentSuggestion = 0;
+
+        function loadSuggestion() {
+            document.getElementById('suggestionBox').textContent = suggesitons[currentIndex] ||
+            'No more suggestions';
+        }
+
+        function vote(choice) {
+            console.log(`Voted ${choice} on: "${suggestions[currentIndex]}"`);
+            document.getElementById('commentBox').style.display = 'block';
+        }
+
+        function submitComment() {
+            const comment = document.getElementById('comment').value;
+            console.log(`Commented: "${comment}"`);
+            document.getElementById('commentBox').style.display = 'none';
+            document.getElementById('comment').value = '';
+            nextSuggestion();
+        }
+        
+        function nextSuggestion() {
+            currentIndex++;
+            if (currentIndex >= suggestions.length) {
+                loadSuggestion();
+            } else {
+                document.getElementById('suggestionBox').textContent = 'Thank you for voting!';
+                document.querySelector('.buttons').style.display = 'none';
+            }
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === 'y') {
+                vote('yes');
+            } else if (event.key === 'n') {
+                vote('no');
+            }
+        });
+
+        loadSuggestion();
+    </script>
+</body>
+</html>
