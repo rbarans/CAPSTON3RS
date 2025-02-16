@@ -7,6 +7,7 @@
     <title>My Profile</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="container">
         <h1>My Profile</h1>
@@ -42,13 +43,12 @@
         <br><br>
 
         <h2 id="my-suggestions">My Suggestions</h2>
-    <!-- <form  method="GET"> -->
     <div>
 
-    <form  method="GET" >
+    <form method="GET" >
 
         <label for="suggestion_filter">Suggestion Filter: </label>
-        <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()">
+        <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()" >
             <option value="">All</option>
             <option value="today" {% if request.args.get('suggestion_filter') == 'today' %} selected {% endif %}>Posted Today</option>
             <option value="yesterday" {% if request.args.get('suggestion_filter') == 'yesterday' %} selected {% endif %}>Posted Yesterday</option>
@@ -178,17 +178,9 @@
         }
     }
 
-    function submitFilter() {
-        // Get current scroll position to keep it
-        var currentScroll = window.scrollY;
 
-        // Submit the form
-        this.form.submit()
 
-        // Ensure the page returns to the same scroll position
-        // window.location.hash = 'my-suggestions';  // Add or update the hash to preserve the scroll position
-        window.scrollTo(0, currentScroll);  // Keep the page's scroll position intact
-    }
+
 </script>
 
 
