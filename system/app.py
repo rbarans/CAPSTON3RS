@@ -1,7 +1,7 @@
 import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
-from datetime import datetime
+import datetime
 from turbo_flask import Turbo
 
 
@@ -91,7 +91,7 @@ def logout():
             logout_user()  # Log the user out
             return render_template('message.html', message="You have been logged out.")
         user_id = current_user.id
-        submission_date = datetime.now().date() #using just the date because SQL can't convert datetime into just date for referencing unique conditions
+        submission_date = datetime.datetime.now().date()
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -120,7 +120,7 @@ def logout():
 def rate_day():
     if current_user.is_authenticated:
         user_id = current_user.id
-        submission_date = datetime.now().date()
+        submission_date = datetime.datetime.now().date()
         new_rating = int(request.form['rating'])
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -198,18 +198,70 @@ def my_ratings():
 @app.route('/my_points')
 @login_required
 def my_points():
-    user_id = current_user.id  # Use Flask-Login's current_user
+    user_id = current_user.id  # Get current user ID
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+    cursor = conn.cursor(dictionary=True)
 
-    # Fetch total points
-    cursor.execute("SELECT points FROM User WHERE userID = %s", (user_id,))
-    user = cursor.fetchone()
-    total_points = user['points'] if user else 0
+    # Get points history (EmojiFeedback, Vote, Suggestion)
+    points_data = []
 
+    # Fetch Emoji Feedbacks
+    cursor.execute("""
+        SELECT SubmissionDate, EmojiRating 
+        FROM EmojiFeedback
+        WHERE UserID = %s
+    """, (user_id,))
+    emoji_feedbacks = cursor.fetchall()
+    for feedback in emoji_feedbacks:
+        points_data.append({
+            'date': feedback['SubmissionDate'],
+            'points': 3,
+            'reason': 'Emoji Feedback'
+        })
 
-    return render_template('profile/my_points.html',total_points=total_points)  # Adjust the path to your template
+    # Fetch Votes
+    cursor.execute("""
+        SELECT VotedDate, VoteType 
+        FROM Vote
+        WHERE UserID = %s
+    """, (user_id,))
+    votes = cursor.fetchall()
+    for vote in votes:
+        points_data.append({
+            'date': vote['VotedDate'],
+            'points': 1,
+            'reason': 'Vote'
+        })
+
+    # Fetch Suggestions
+    cursor.execute("""
+        SELECT CreatedDate 
+        FROM Suggestion
+        WHERE UserID = %s
+    """, (user_id,))
+    suggestions = cursor.fetchall()
+    for suggestion in suggestions:
+        points_data.append({
+            'date': suggestion['CreatedDate'],
+            'points': 5,
+            'reason': 'Suggestion'
+        })
+
+    # Calculate total points
+    total_points = sum(item['points'] for item in points_data)
+
+    # Sort points data by date (newest first)
+    points_data = sorted(
+        points_data, 
+        key=lambda x: x['date'].date() if isinstance(x['date'], datetime.datetime) else x['date'], 
+        reverse=True
+    )
+    cursor.close()
+    conn.close()
+
+    return render_template('profile/my_points.html', points_data=points_data, total_points=total_points)
+
 
 @app.route('/my_suggestions')
 @login_required
