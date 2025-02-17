@@ -4,10 +4,11 @@
     width: 200px;
     background-color: #f4f4f4;
     padding-top: 20px;
-    position: fixed;
+    position: absolute;
     height: 100%;
+    
     /*Zar */
-    margin-left: 12%;
+    margin-left: 10%;
     margin-top: 1%;
     /* ----*/
 }
@@ -212,3 +213,22 @@ form {
     background-color: #d47c9e; /* Darker shade on hover */
 }
 
+/* Zar ========================= Responsive Design ========================= */
+
+@media (max-width: 1300px) {  
+    .container {
+        margin: 2rem auto;
+        padding: 20px;
+    }
+ 
+    .sidebar {
+        width: 200px;
+        background-color: #f4f4f4;
+        padding-top: 20px;
+        position: absolute;
+        height: 100%; 
+        margin-left: 1%;
+        margin-top: 1%; 
+    }
+    /* End of Zar */
+}
