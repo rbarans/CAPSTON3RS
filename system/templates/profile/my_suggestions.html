@@ -5,7 +5,7 @@
 
 <head>
     <title>My Profile</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
 </head>
 
 <body>
@@ -17,17 +17,21 @@
             <select id="suggestion_filter" name="suggestion_filter" onchange="this.form.submit()">
                 <option value="">All</option>
                 <option value="today" {% if request.args.get('suggestion_filter') == 'today' %} selected {% endif %}>Posted Today</option>
-                <option value="yesterday" {% if request.args.get('suggestion_filter') == 'yesterday' %} selected {% endif %}>Posted Yesterday</option>
                 <option value="last_week" {% if request.args.get('suggestion_filter') == 'last_week' %} selected {% endif %}>Posted in the Last Week</option>
-                <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>With Highest Net Votes</option>
-                <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>With Lowest Net Votes</option>
+                <option value="recent_to_oldest" {% if request.args.get('suggestion_filter')=='recent_to_oldest' %} selected {% endif %}>Newest to Oldest Post</option>
+                <option value="oldest_to_recent" {% if request.args.get('suggestion_filter')=='oldest_to_recent' %} selected {% endif %}>Oldest to Newest Post</option>
+                <option value="highest_net_votes" {% if request.args.get('suggestion_filter') == 'highest_net_votes' %} selected {% endif %}>Highest to Lowest Net Votes</option>
+                <option value="lowest_net_votes" {% if request.args.get('suggestion_filter') == 'lowest_net_votes' %} selected {% endif %}>Lowest to Highest Net Votes</option>
                 <option value="keyword" {% if request.args.get('suggestion_filter') == 'keyword' %} selected {% endif %}>Containing Keywords</option>
             </select>
 
             <input type="text" name="suggestion_keyword" placeholder="Enter keyword" 
                    value="{{ request.args.get('suggestion_keyword', '') }}" 
                    {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %} />
-            <button type="submit" {% if request.args.get('suggestion_filter') != 'keyword' %} style="display:none;" {% endif %}>Apply Filter</button>
+                <button class="btn-profile" type="submit" {% if request.args.get('suggestion_filter') !='keyword' %} style="display:none;" {% endif %}>Apply Filter</button>
+        
+            <a href="{{ url_for('my_suggestions') }}" class="btn-profile">Reset Filter</a>
+
         </form>
 
         <div id="my-suggestions" class="card-container">
