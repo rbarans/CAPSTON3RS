@@ -3,25 +3,35 @@
 {% extends 'profile/profile_base.html' %}
 
 {% block main_content %}
-
 <head>
-    <title>My Profile</title>
+    <title>My Points</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
 </head>
 
 <body>
     <div class="container">
         <h1>My Points</h1>
-
         <h3><strong>Total Points:</strong> {{ total_points }}</h3>
 
-        <h3><strong>Current Position on Leaderboard:</strong> </h3>
-
-
         <h2>Points History</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Points</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in points_data %}
+                <tr>
+                    <td>{{ entry.date.strftime('%m/%d/%Y') }}</td>
+                    <td>+{{ entry.points }}</td>
+                    <td>{{ entry.reason }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-
 </body>
-
 {% endblock %}
-
