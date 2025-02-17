@@ -146,16 +146,49 @@ def rate_day():
 
 
 # Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/my_profile', methods=['GET', 'POST'])
 @login_required
-def profile():
+def my_profile():
     user_id = current_user.id  # Use Flask-Login's current_user
 
-    # Get filter parameters from the request, if any
-    suggestion_filter = request.args.get('suggestion_filter', '')  # Default to empty string
-    suggestion_keyword = request.args.get('suggestion_keyword', '')  # Keyword search for filtering suggestions
-    vote_filter = request.args.get('vote_filter', '')  # Default to empty string
-    vote_keyword = request.args.get('vote_keyword', '')  # Keyword search for filtering votes
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    # Fetch the user's username
+    cursor.execute(
+        "SELECT Username FROM User WHERE userID = %s",
+        (user_id,))
+    username_data = cursor.fetchone()
+    username = username_data['Username'] if username_data else None
+
+
+    return render_template('profile/my_profile.html', username=username)
+
+
+@app.route('/my_ratings')
+def my_ratings():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    # Fetch today's emoji reaction (if any)
+    cursor.execute(
+        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
+        (user_id,))
+    todays_reaction = cursor.fetchone()
+
+    # Fetch all emoji reactions from the past week, excluding today's reaction
+    cursor.execute("SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s", (user_id,))
+    all_reactions = cursor.fetchall()
+    all_reactions = sorted(all_reactions, key=lambda x: x['submissiondate'], reverse=True)
+
+
+    return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)  
+
+@app.route('/my_points')
+def my_points():
+    user_id = current_user.id  # Use Flask-Login's current_user
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
@@ -165,61 +198,87 @@ def profile():
     user = cursor.fetchone()
     total_points = user['points'] if user else 0
 
-    # Fetch today's emoji reaction (if any)
-    cursor.execute(
-        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
-        (user_id,))
-    todays_reaction = cursor.fetchone()
 
-    # Fetch emoji reactions from the past week, excluding today's reaction
-    cursor.execute(
-        "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND submissiondate >= CURDATE() - INTERVAL 7 DAY AND DATE(submissiondate) < CURDATE()",
-        (user_id,))
-    last_week_reactions = cursor.fetchall()
 
-    # Build dynamic query for filtering suggestions
+    return render_template('profile/my_points.html',total_points=total_points)  # Adjust the path to your template
+
+@app.route('/my_suggestions')
+def my_suggestions():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    # Get filter parameters from the request, if any
+    suggestion_filter = request.args.get('suggestion_filter', '')  # Default to empty string
+    suggestion_keyword = request.args.get('suggestion_keyword', '')  # Keyword search for filtering suggestions
+
+    # Base query for fetching suggestions
     suggestion_query = """
         SELECT 
-           description, createdDate, netVotes, userID,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 1) AS positiveVotes,
-            (SELECT COUNT(*) FROM Vote WHERE suggestionID = Suggestion.suggestionID AND voteType = 0) AS negativeVotes
-        FROM Suggestion 
-        WHERE userID = %s
+            s.suggestionID, s.Description, s.Comments, s.createdDate, s.netVotes, 
+            s.positiveVote, s.negativeVote, 
+            (SELECT st.StatusName 
+            FROM Status st 
+            WHERE s.NetVotes >= st.Threshold 
+            ORDER BY st.Threshold DESC 
+            LIMIT 1) AS StatusName
+        FROM Suggestion s
+        WHERE s.userID = %s
     """
-
-    # Apply filters based on the selected filter option
-    params = [user_id]  # Initialize with user_id
+    params = [user_id]
 
     # Apply filters based on the selected filter option
     if suggestion_filter == 'today':
-        suggestion_query += " AND DATE(createdDate) = CURDATE()"
+        suggestion_query += " AND DATE(s.createdDate) = CURDATE()"
     elif suggestion_filter == 'yesterday':
-        suggestion_query += " AND DATE(createdDate) = CURDATE() - INTERVAL 1 DAY"
+        suggestion_query += " AND DATE(s.createdDate) = CURDATE() - INTERVAL 1 DAY"
     elif suggestion_filter == 'last_week':
-        suggestion_query += " AND createdDate >= CURDATE() - INTERVAL 7 DAY"
+        suggestion_query += " AND s.createdDate >= CURDATE() - INTERVAL 7 DAY"
     elif suggestion_filter == 'highest_net_votes':
-        suggestion_query += " ORDER BY netVotes DESC"
+        suggestion_query += " ORDER BY s.netVotes DESC"
     elif suggestion_filter == 'lowest_net_votes':
-        suggestion_query += " ORDER BY netVotes ASC"
+        suggestion_query += " ORDER BY s.netVotes ASC"
     elif suggestion_filter == 'keyword' and suggestion_keyword:
-        suggestion_query += " AND description LIKE %s"
+        suggestion_query += " AND s.description LIKE %s"
         params.append(f'%{suggestion_keyword}%')  # Add the parameter only if keyword filter is used
 
-
-    cursor.execute(suggestion_query, tuple(params))  # Pass parameters as a tuple
+    cursor.execute(suggestion_query, tuple(params))  # Execute the query after modifying the string and params
     suggestions = cursor.fetchall()
 
+    cursor.close()  # Close the cursor after use
+    conn.close()
+
+    return render_template('profile/my_suggestions.html', suggestions=suggestions, 
+                           suggestion_filter=suggestion_filter, suggestion_keyword=suggestion_keyword)
+
+
+@app.route('/my_votes')
+def my_votes():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    vote_filter = request.args.get('vote_filter', '')  # Default to empty string
+    vote_keyword = request.args.get('vote_keyword', '')  # Keyword search for filtering votes
 
     # Build dynamic query for filtering votes given
     vote_query = """
-        SELECT v.voteType, v.suggestionID, v.VotedDate, s.description, s.userID, s.CreatedDate 
+        SELECT v.voteType, v.suggestionID, v.VotedDate, 
+            s.description, s.userID, s.CreatedDate, s.suggestionID, s.Comments,
+            (SELECT st.StatusName 
+            FROM Status st 
+            WHERE s.NetVotes >= st.Threshold 
+            ORDER BY st.Threshold DESC 
+            LIMIT 1) AS StatusName 
         FROM Vote v
         JOIN Suggestion s ON v.suggestionID = s.suggestionID
         WHERE v.userID = %s
     """
 
-    # Apply vote filters
-    vote_params = [user_id]  # Initialize with user_id for votes query
+    # Parameters for the query
+    vote_params = [user_id]  
 
     # Apply vote filters
     if vote_filter == 'today':
@@ -243,18 +302,16 @@ def profile():
     cursor.close()  # Close the cursor after use
     conn.close()
 
-    return render_template(
-        'profile.html',
-        total_points=total_points,
-        suggestions=suggestions,
-        vote_filter=vote_filter,
-        vote_keyword=vote_keyword,
-        suggestion_filter=suggestion_filter,
-        suggestion_keyword=suggestion_keyword,
-        todays_reaction=todays_reaction,
-        last_week_reactions=last_week_reactions,
-        votes_given=votes_given
-    )
+    return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
+
+@app.route('/my_account')
+def my_account():
+    user_id = current_user.id  # Use Flask-Login's current_user
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+
+    return render_template('profile/my_account.html')  # Adjust the path to your template
 
 
 # Zar: route to render the create account form

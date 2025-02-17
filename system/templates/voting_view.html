@@ -22,7 +22,7 @@
         <!-- Suggestions Card View -->
         <div class="card-container">
             {% for suggestion in suggestions %}
-            <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}">
+            <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}" style="position: relative;">
                 <div class="card-header">
                     <p class="status-label status-{{ suggestion.StatusName | lower | replace(' ', '-') }}">
                         Status: <span id="status-{{ suggestion.SuggestionID }}">{{ suggestion.StatusName or "Unknown" }}</span>
@@ -32,6 +32,13 @@
                     <a href="javascript:void(0);" class="view-details" data-index="{{ loop.index0 }}">
                         <weak>Click to View Details</weak>
                     </a>
+
+                    <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
+                    <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
+                        {{ suggestion['CreatedDate'].strftime('%m/%d/%Y') }}
+                        <br>
+                        {{ suggestion['CreatedDate'].strftime('%I:%M %p') }}
+                    </span>
 
                     <!-- Voting Section -->
                     <div class="vote-buttons">

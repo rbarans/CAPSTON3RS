@@ -1,0 +1,55 @@
+{% extends 'profile/profile_base.html' %}
+
+{% block main_content %}
+
+<head>
+    <title>My Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
+
+</head>
+
+<body>
+    <div class="container">
+
+    <h1>My Emoji Ratings</h1>
+
+    <!-- Display today's rating if available -->
+    {% if todays_reaction %}
+    <h3>Today's Rating: {{ selected_emoji }}
+        {% if todays_reaction.emojirating == 1 %}😞{% elif todays_reaction.emojirating == 2 %}🙁{% elif
+        todays_reaction.emojirating == 3 %}😐{% elif todays_reaction.emojirating == 4 %}🙂{% elif
+        todays_reaction.emojirating == 5 %} 😁{% endif %}</h3>
+    {% else %}
+    <p>No rating for today yet.</p>
+    {% endif %}
+
+    <!-- Display all ratings including today's and last week's -->
+    <h2>All Emoji Ratings</h2>
+    {% if all_reactions %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Emoji Rating</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reaction in all_reactions %}
+            <tr>
+                <td>{{ reaction.submissiondate.strftime('%m/%d/%Y') }}</td>
+                <td>
+                    {% if reaction.emojirating == 1 %}😞{% elif reaction.emojirating == 2 %}🙁{% elif
+                    reaction.emojirating == 3 %}😐{% elif reaction.emojirating == 4 %}🙂{% elif reaction.emojirating == 5 %}😁{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No emoji ratings found.</p>
+    {% endif %}
+    </div>
+
+</body>
+
+{% endblock %}
