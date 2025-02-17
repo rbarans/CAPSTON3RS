@@ -6,15 +6,19 @@
 
 <head>
     <title>My Profile</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
 </head>
 
 <body>
-
-
     <div class="container">
         <h1>My Points</h1>
-        <p><strong>Total Points:</strong> {{ total_points }}</p>
+
+        <h3><strong>Total Points:</strong> {{ total_points }}</h3>
+
+        <h3><strong>Current Position on Leaderboard:</strong> </h3>
+
+
+        <h2>Points History</h2>
     </div>
 
 </body>

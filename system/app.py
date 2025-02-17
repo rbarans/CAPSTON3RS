@@ -17,6 +17,7 @@ app.secret_key = os.urandom(24)  # Generates a random 24-byte secret key
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
 # MySQL database connection function
 def get_db_connection():
     conn = mysql.connector.connect(
@@ -45,7 +46,6 @@ def load_user(user_id):
     conn.close()
     return User(user['UserID'], user['Username']) if user else None
 
-
 # Rana: route to home page
 @app.route('/')
 def home():
@@ -58,19 +58,27 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM User WHERE Username = %s AND Password = %s", (username, password))
+        cursor.execute("SELECT * FROM User WHERE Username = %s", (username,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-        if user:
+        
+        if user and user['Password'] == password:  # Compare password directly
             login_user(User(user['UserID'], user['Username']))
             return redirect(url_for('home'))
-        else:
-            flash("Invalid username or password", "danger")
-            return redirect(url_for('login'))
+        elif user:  # User exists, but password is incorrect
+            flash("Incorrect password.", "danger")
+        else:  # User doesn't exist
+            flash("Username not found.", "danger")
+        
+        return redirect(url_for('login'))
+    
     return render_template('login.html')
+
+
 
 
 # Rana: route to log out of account 
@@ -166,6 +174,7 @@ def my_profile():
 
 
 @app.route('/my_ratings')
+@login_required
 def my_ratings():
     user_id = current_user.id  # Use Flask-Login's current_user
 
@@ -187,6 +196,7 @@ def my_ratings():
     return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)  
 
 @app.route('/my_points')
+@login_required
 def my_points():
     user_id = current_user.id  # Use Flask-Login's current_user
 
@@ -199,10 +209,10 @@ def my_points():
     total_points = user['points'] if user else 0
 
 
-
     return render_template('profile/my_points.html',total_points=total_points)  # Adjust the path to your template
 
 @app.route('/my_suggestions')
+@login_required
 def my_suggestions():
     user_id = current_user.id  # Use Flask-Login's current_user
 
@@ -231,10 +241,12 @@ def my_suggestions():
     # Apply filters based on the selected filter option
     if suggestion_filter == 'today':
         suggestion_query += " AND DATE(s.createdDate) = CURDATE()"
-    elif suggestion_filter == 'yesterday':
-        suggestion_query += " AND DATE(s.createdDate) = CURDATE() - INTERVAL 1 DAY"
     elif suggestion_filter == 'last_week':
         suggestion_query += " AND s.createdDate >= CURDATE() - INTERVAL 7 DAY"
+    elif suggestion_filter == 'recent_to_oldest':
+        suggestion_query += " ORDER BY s.createdDate DESC"
+    elif suggestion_filter == 'oldest_to_recent':
+        suggestion_query += " ORDER BY s.createdDate ASC"
     elif suggestion_filter == 'highest_net_votes':
         suggestion_query += " ORDER BY s.netVotes DESC"
     elif suggestion_filter == 'lowest_net_votes':
@@ -243,17 +255,23 @@ def my_suggestions():
         suggestion_query += " AND s.description LIKE %s"
         params.append(f'%{suggestion_keyword}%')  # Add the parameter only if keyword filter is used
 
+    # Default to sorting by createdDate DESC (most recent first) if no filter is selected
+    if not suggestion_filter:
+        suggestion_query += " ORDER BY s.createdDate DESC"
+    
     cursor.execute(suggestion_query, tuple(params))  # Execute the query after modifying the string and params
     suggestions = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
-    conn.close()
+    conn.close()  # Close the connection
 
     return render_template('profile/my_suggestions.html', suggestions=suggestions, 
                            suggestion_filter=suggestion_filter, suggestion_keyword=suggestion_keyword)
 
 
+
 @app.route('/my_votes')
+@login_required
 def my_votes():
     user_id = current_user.id  # Use Flask-Login's current_user
 
@@ -283,10 +301,12 @@ def my_votes():
     # Apply vote filters
     if vote_filter == 'today':
         vote_query += " AND DATE(v.VotedDate) = CURDATE()"
-    elif vote_filter == 'yesterday':
-        vote_query += " AND DATE(v.VotedDate) = CURDATE() - INTERVAL 1 DAY"
     elif vote_filter == 'last_week':
         vote_query += " AND v.VotedDate >= CURDATE() - INTERVAL 7 DAY"
+    elif vote_filter == 'recent_to_oldest':
+        vote_query += " ORDER BY v.VotedDate DESC"
+    elif vote_filter == 'oldest_to_recent':
+        vote_query += " ORDER BY v.VotedDate ASC"
     elif vote_filter == 'yes':
         vote_query += " AND v.voteType = 1"
     elif vote_filter == 'no':
@@ -295,23 +315,79 @@ def my_votes():
         vote_query += " AND s.description LIKE %s"
         vote_params.append(f'%{vote_keyword}%')  # Add the parameter only if keyword filter is used
 
+    # Default to sorting by VotedDate DESC (most recent first) if no filter is selected
+    if not vote_filter:
+        vote_query += " ORDER BY v.VotedDate DESC"
+
     # Execute vote query
     cursor.execute(vote_query, tuple(vote_params))  # Pass parameters as a tuple
     votes_given = cursor.fetchall()
 
     cursor.close()  # Close the cursor after use
-    conn.close()
+    conn.close()  # Close the connection
 
     return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
 
 @app.route('/my_account')
+@login_required  # Ensure only logged-in users can access
 def my_account():
-    user_id = current_user.id  # Use Flask-Login's current_user
+    user_id = current_user.id  
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
+    cursor = conn.cursor(dictionary=True)  
 
-    return render_template('profile/my_account.html')  # Adjust the path to your template
+    cursor.execute("SELECT username FROM User WHERE UserID = %s", (user_id,))
+    user = cursor.fetchone()  # Fetch the user's username
+
+    cursor.close()
+    conn.close()
+
+    return render_template('profile/my_account.html', user=user) 
+
+
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    user_id = current_user.id  
+
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    print(f"Current Password: {current_password}")  # Debugging
+    print(f"New Password: {new_password}")  # Debugging
+    print(f"Confirm Password: {confirm_password}")  # Debugging
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Fetch the current password (plain text)
+    cursor.execute("SELECT Password FROM User WHERE UserID = %s", (current_user.id,))
+    user = cursor.fetchone()
+
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for('my_account'))
+
+    # Check if the current password matches the one in the database (no hashing)
+    if user['Password'] != current_password:
+        flash("Current password is incorrect.", "error")
+        return redirect(url_for('my_account'))
+
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "error")
+        return redirect(url_for('my_account'))
+
+    # Update the password (plain text)
+    cursor.execute("UPDATE User SET Password = %s WHERE UserID = %s", (new_password, current_user.id))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    flash("Password updated successfully.", "success")
+    return redirect(url_for('my_account'))
+
 
 
 # Zar: route to render the create account form
@@ -334,7 +410,7 @@ def createaccount():
     try:
         conn = get_db_connection()
         cursor = conn.cursor() 
-        cursor.execute("INSERT INTO User (username, password) VALUES (%s, %s)", (username, password))
+        cursor.execute("INSERT INTO User (Username, Password) VALUES (%s, %s)", (username, password))
         conn.commit()
         cursor.close()
         conn.close()

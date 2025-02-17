@@ -5,6 +5,20 @@
 {% block content %}
 <div class="container">
     <h1>Login</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div id="flash-container">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+
     <form method="POST" action="{{ url_for('login') }}">
         <table>
             <tr>
@@ -29,4 +43,18 @@
  
     </form>
 </div>
+
+<script>
+    // Fade out the flash messages after they appear
+    window.addEventListener('load', function() {
+        const flashMessages = document.querySelectorAll('.flash');
+        flashMessages.forEach(function(flashMessage) {
+            setTimeout(function() {
+                flashMessage.style.opacity = 0;
+            }, 3000); // Fade out after 3 seconds
+        });
+    });
+</script>
+
+
 {% endblock %}
