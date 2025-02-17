@@ -1,5 +1,5 @@
 <!-- Created by Zar -->
- 
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -22,11 +22,11 @@
         <form id="suggestionForm" method="POST">
             <table>
                 <tr>
-                    <td><label for="Description">Suggestion:</label></td>
+                    <td><label for="Description">Title:</label></td>
                     <td><textarea type="text" rows="3" id="Description" name="Description" required></textarea></td>
                 </tr>
                 <tr>
-                    <td><label for="Comments">Comments:</label></td>
+                    <td><label for="Comments">Description:</label></td>
                     <td><textarea type="text" rows="3" id="Comments" name="Comments"></textarea></td>
                 </tr>
 
@@ -52,7 +52,9 @@
             <tr>
                 <td>{{ suggestion.Description }}</td>
                 <td>{{ suggestion.Comments }}</td>
-                <td>{{ suggestion.CreatedDate }}</td>
+                <td>  
+                    {{suggestion.CreatedDate.strftime('%m/%d/%Y') }} - {{ suggestion.CreatedDate.strftime('%I:%M %p') }}
+                </td>
                 <td class="td-action">
                     <form class="deleteForm" method="POST">
                         <input type="hidden" name="SuggestionID" value="{{ suggestion.SuggestionID }}">
