@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>You've already submitted feedback today!</h2>
+<h2 style="text-align: center!important;">You've already submitted feedback today!</h2>
 <p>Your current rating: {{ selected_emoji }}</p>
 <div>
     <form method="POST" action="{{ url_for('rate_day') }}">

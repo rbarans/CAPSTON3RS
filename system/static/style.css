@@ -547,12 +547,13 @@ h2 {
 
 #flash-container {
     position: fixed;
-    top: 10px;
+    top: 10%;
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;
     width: auto;
     max-width: 400px;
+    color:#4CAF50;
 }
 
 .flash {

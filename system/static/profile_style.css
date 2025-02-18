@@ -1,14 +1,14 @@
 /* Rana : Profile Styles */
 
 .sidebar {
-    width: 200px;
+    /*width: 200px;*/
     background-color: #f4f4f4;
     padding-top: 20px;
     position: absolute;
     height: 100%;
     
     /*Zar */
-    margin-left: 5%;
+    margin-left: 4%;
     margin-top: 1%;
     /* ----*/
 }
@@ -23,8 +23,8 @@
 }
 
 .sidebar ul li a {
-    text-decoration: none;
-    color: #050316;
+    text-decoration: none; 
+    color: #2980b9;
     font-size: 16px;
     display: block;
     padding: 10px;
@@ -38,7 +38,7 @@
 }
 
 .main-content {
-    margin-left: 220px; /* Adjust this value to the width of your sidebar */
+    margin-left: 220px; /* Adjust this value to the width of your sidebar */ 
     padding: 20px;
 }
 
@@ -226,8 +226,7 @@ form {
     {
         margin-left: 10%;
     }
-    .sidebar {
-        width: 200px;
+    .sidebar { 
         background-color: #f4f4f4;
         padding-top: 20px;
         position: absolute;
@@ -237,3 +236,12 @@ form {
     }
     /* End of Zar */
 }
+/*
+@media (max-width: 768px) {
+    .main-content {
+        
+        margin-left: 2rem auto;  
+        padding: 20px;
+    }
+}
+    */

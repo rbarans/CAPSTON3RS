@@ -3,7 +3,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2> Before You Go, Rate Your Day!</h2>
+<h2 style="text-align: center !important;"> Before You Go, Rate Your Day!</h2>
 <form method="POST" action="{{ url_for('rate_day') }}">
     <button type="submit" name="rating" value="1">😞</button> <!-- had to change to buttons for formatting/getting existing users to work -->
     <button type="submit" name="rating" value="2">🙁</button>

@@ -142,8 +142,15 @@ def rate_day():
             # Insert new feedback
             cursor.execute(
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                (user_id, new_rating, datetime.now())
+                (user_id, new_rating, datetime.datetime.now())
             )
+                       
+            # Zar : Updating 3 point for Rating Day                                      
+            cursor.execute(
+                "UPDATE User SET Points = Points + 3  WHERE UserID = %s", (user_id,)
+            )
+            
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -502,21 +509,24 @@ def add_suggestion():
     data = request.form
     user_id = current_user.id
     description = data.get("Description")
-    comments = data.get("Comments") 
-    created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-   # if not user_id or not description:
-   #     return jsonify({"error": user_id}), 400
+    comments = data.get("Comments")  
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor() 
-
+        cursor = conn.cursor(dictionary=True) 
+      
+        # Insert suggestion    
         query = """
                 INSERT INTO Suggestion (UserID, Description, Comments, CreatedDate)
                 VALUES (%s, %s, %s, %s)
                 """
-        cursor.execute(query, (user_id, description, comments, created_date))
+        cursor.execute(query, (user_id, description, comments, datetime.datetime.now()))
+         
+        # Zar : Updating 5 points for Posting Suggestion                                      
+        cursor.execute(
+            "UPDATE User SET Points = Points + 5  WHERE UserID = %s", (user_id,)
+        )
+ 
         conn.commit()
         cursor.close()
         conn.close()
@@ -555,14 +565,22 @@ def update_suggestion(suggestion_id, description=None, comments=None):
 # Zar: function to delete a suggestion
 @app.route('/delete_suggestion', methods=['POST'])
 def del_suggestion():
+    user_id = current_user.id
     suggestion_id = request.form.get('SuggestionID')
+
     if not suggestion_id:
         return jsonify({"error": "SuggestionID is required"}), 400
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)  # Ensure the cursor returns dictionaries
         cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
+
+        # Zar : Updating 5 points of deduction for deleting suggestion (ensuring they don’t go below 0)
+        cursor.execute(
+            "UPDATE User SET Points = GREATEST(Points - 5, 0) WHERE UserID = %s", (user_id,)
+        )
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -682,6 +700,17 @@ def vote():
                 "INSERT INTO Vote (UserID, SuggestionID, VoteType) VALUES (%s, %s, %s)",
                 (user_id, suggestion_id, vote_value)
             )
+            
+            # Zar : Updating 1 point for Voting                                       
+            cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (user_id,))
+
+
+            cursor.execute("SELECT UserID FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
+            suggestion_user = cursor.fetchone()
+            receiving_userid = suggestion_user['UserID']
+            
+            # Zar : Updating 1 point for Receiving Vote 
+            cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (receiving_userid,))
 
         # Update the Suggestion table with new vote counts
         update_suggestion_query = """
