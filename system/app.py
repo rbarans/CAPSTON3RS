@@ -2,6 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
+# from datetime import datetime
 from turbo_flask import Turbo
 
 
@@ -14,6 +15,7 @@ profile_bp = Blueprint('profile', __name__)
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem to persist session data
 app.config['SESSION_PERMANENT'] = True
 app.secret_key = os.urandom(24)  # Generates a random 24-byte secret key
+app.config['SESSION_COOKIE_NAME'] = 'your_session_cookie'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -79,9 +81,6 @@ def login():
     return render_template('login.html')
 
 
-
-
-# Rana: route to log out of account 
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
@@ -95,23 +94,36 @@ def logout():
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+
+        # Check if feedback already exists for today
         cursor.execute(
             "SELECT * FROM EmojiFeedback WHERE UserID = %s AND DATE(SubmissionDate) = %s",
             (user_id, submission_date)
         )
-        existing_feedback = cursor.fetchone() #checking for existing feedback for a user on that specific day
-        cursor.close()
-        conn.close()
+        
+        # Fetch the result before closing the cursor
+        existing_feedback = cursor.fetchone() 
 
+
+        # Process the result
         if existing_feedback:
             emoji_map = {1: "😞", 2: "🙁", 3: "😐", 4: "🙂", 5: "😁"} #stores emojis into values to show on the frontend
             selected_emoji = emoji_map.get(existing_feedback['EmojiRating'], "😐")
+
+            cursor.fetchall()
+            cursor.close()
+            conn.close()
+
             return render_template(
                 'feedback_options.html',
                 selected_emoji=selected_emoji
             )
         else:
+            cursor.fetchall()
+            cursor.close()
+            conn.close()
             return render_template('logout.html') #no existing feedback then fill out for the first time
+           
     return redirect(url_for('login'))
 
 
@@ -132,6 +144,8 @@ def rate_day():
         )
         existing_feedback = cursor.fetchone()
 
+        cursor.fetchall()
+
         if existing_feedback:
             # Update the existing feedback
             cursor.execute(
@@ -144,20 +158,25 @@ def rate_day():
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
                 (user_id, new_rating, datetime.datetime.now())
             )
-                       
+            
             # Zar : Updating 3 point for Rating Day                                      
             cursor.execute(
                 "UPDATE User SET Points = Points + 3  WHERE UserID = %s", (user_id,)
             )
-            
+ 
 
         conn.commit()
+
         cursor.close()
         conn.close()
+
         logout_user()
         return render_template('message.html', message="You have been logged out.")
 
     return redirect(url_for('login'))
+
+
+
 
 
 # Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
@@ -174,9 +193,13 @@ def my_profile():
         "SELECT Username FROM User WHERE userID = %s",
         (user_id,))
     username_data = cursor.fetchone()
+    cursor.fetchall()
+
+
     username = username_data['Username'] if username_data else None
 
-
+    cursor.close()
+    conn.close()
     return render_template('profile/my_profile.html', username=username)
 
 
@@ -186,21 +209,28 @@ def my_ratings():
     user_id = current_user.id  # Use Flask-Login's current_user
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
 
-    # Fetch today's emoji reaction (if any)
-    cursor.execute(
+    # Use the first cursor to fetch today's reaction
+    cursor1 = conn.cursor(dictionary=True)
+    cursor1.execute(
         "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
         (user_id,))
-    todays_reaction = cursor.fetchone()
+    todays_reaction = cursor1.fetchone()
+    cursor1.fetchall()
+    cursor1.close()  # Close the first cursor after use
 
-    # Fetch all emoji reactions from the past week, excluding today's reaction
-    cursor.execute("SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s", (user_id,))
-    all_reactions = cursor.fetchall()
+    # Use the second cursor to fetch all reactions
+    cursor2 = conn.cursor(dictionary=True)
+    cursor2.execute("SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s", (user_id,))
+    all_reactions = cursor2.fetchall()
     all_reactions = sorted(all_reactions, key=lambda x: x['submissiondate'], reverse=True)
+    cursor2.fetchall()
+    cursor2.close()  # Close the second cursor after use
 
+    # Close the connection
+    conn.close()
 
-    return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)  
+    return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)
 
 @app.route('/my_points')
 @login_required
@@ -223,8 +253,9 @@ def my_points():
     for feedback in emoji_feedbacks:
         points_data.append({
             'date': feedback['SubmissionDate'],
-            'points': 3,
-            'reason': 'Emoji Feedback'
+            'time': ' ',  # Save time
+            'points': +3,
+            'reason': 'You rated your day with emojis!'
         })
 
     # Fetch Votes
@@ -237,37 +268,53 @@ def my_points():
     for vote in votes:
         points_data.append({
             'date': vote['VotedDate'],
-            'points': 1,
-            'reason': 'Vote'
+            'time': vote['VotedDate'].strftime('%H:%M:%S'),  # Save time
+            'points': +1,
+            'reason': 'You voted on a suggestion!'
         })
 
-    # Fetch Suggestions
+# Fetch Suggestions
     cursor.execute("""
         SELECT CreatedDate 
         FROM Suggestion
         WHERE UserID = %s
     """, (user_id,))
     suggestions = cursor.fetchall()
+
+
+    # Add +5 points for each suggestion (only if not already in history)
     for suggestion in suggestions:
+        # Append the points for this suggestion to points_data
         points_data.append({
             'date': suggestion['CreatedDate'],
-            'points': 5,
-            'reason': 'Suggestion'
+            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),
+            'points': +5,
+            'reason': 'You posted a new suggestion!'
         })
+
+    # Add points for deleted suggestions (stored in session)
+    if 'points_history' not in session:
+        session['points_history'] = []
+    points_data.extend(session['points_history'])
 
     # Calculate total points
     total_points = sum(item['points'] for item in points_data)
 
-    # Sort points data by date (newest first)
+    # Sort by both date and time (most recent event on top)
     points_data = sorted(
         points_data, 
-        key=lambda x: x['date'].date() if isinstance(x['date'], datetime.datetime) else x['date'], 
-        reverse=True
+        key=lambda x: (
+            x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
+        ),
+
+        reverse=True  # Reverse to get the most recent on top
     )
+
     cursor.close()
     conn.close()
 
     return render_template('profile/my_points.html', points_data=points_data, total_points=total_points)
+
 
 
 @app.route('/my_suggestions')
@@ -421,7 +468,7 @@ def change_password():
     cursor = conn.cursor(dictionary=True)
 
     # Fetch the current password (plain text)
-    cursor.execute("SELECT Password FROM User WHERE UserID = %s", (current_user.id,))
+    cursor.execute("SELECT Password FROM User WHERE UserID = %s", (user_id,))
     user = cursor.fetchone()
 
     if not user:
@@ -509,7 +556,9 @@ def add_suggestion():
     data = request.form
     user_id = current_user.id
     description = data.get("Description")
+ 
     comments = data.get("Comments")  
+ 
 
     try:
         conn = get_db_connection()
@@ -563,6 +612,7 @@ def update_suggestion(suggestion_id, description=None, comments=None):
 
 
 # Zar: function to delete a suggestion
+# Rana: updated to show in points history
 @app.route('/delete_suggestion', methods=['POST'])
 def del_suggestion():
     user_id = current_user.id
@@ -573,23 +623,64 @@ def del_suggestion():
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # Ensure the cursor returns dictionaries
-        cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
+ 
+        cursor = conn.cursor(dictionary=True)
 
-        # Zar : Updating 5 points of deduction for deleting suggestion (ensuring they don’t go below 0)
-        cursor.execute(
-            "UPDATE User SET Points = GREATEST(Points - 5, 0) WHERE UserID = %s", (user_id,)
-        )
+        # Get the suggestion's creation date and UserID
+        cursor.execute("""
+            SELECT CreatedDate, UserID
+            FROM Suggestion
+            WHERE SuggestionID = %s
+        """, (suggestion_id,))
+        suggestion = cursor.fetchone()
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({"message": "Suggestion deleted successfully"}), 200
+        if suggestion:
+            created_date = suggestion['CreatedDate']
+
+            # Check if points history exists, if not, create it
+            if 'points_history' not in session:
+                session['points_history'] = []
+
+            # Only add -5 if it hasn't already been added for this suggestion
+            session['points_history'].append({
+                    'date': created_date,
+                    'time': created_date.strftime('%H:%M:%S'),
+                    'points': -5,
+                    'reason': 'You deleted a post'
+            })
+
+            # Delete votes associated with the suggestion first
+            #cursor.execute("""
+            #    DELETE FROM Vote
+            #    WHERE SuggestionID = %s
+            #""", (suggestion_id,))
+            #conn.commit()
+
+            # Delete the suggestion itself
+            cursor.execute("""
+                DELETE FROM Suggestion
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+             
+            # Zar : Updating 5 points of deduction for deleting suggestion (ensuring they don’t go below 0)
+            cursor.execute(
+                "UPDATE User SET Points = GREATEST(Points - 5, 0) WHERE UserID = %s", (user_id,)
+            )
+        
+            conn.commit()
+
+            cursor.close()
+            conn.close()
+
+            return jsonify({"message": "Suggestion deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Suggestion not found"}), 404
+
+ 
     except Exception as e:
         print(f"Error: {e}")
-        #return jsonify({"error": str(e)}), 500
-        return jsonify({"error": "The suggestion has been voted on and can no longer be deleted."}), 500
-    
+        return jsonify({"error": "An error occurred while trying to delete the suggestion."}), 500
+
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
