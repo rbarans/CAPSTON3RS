@@ -2,6 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
+# from datetime import datetime
 from turbo_flask import Turbo
 
 
@@ -79,9 +80,6 @@ def login():
     return render_template('login.html')
 
 
-
-
-# Rana: route to log out of account 
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
@@ -95,23 +93,36 @@ def logout():
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+
+        # Check if feedback already exists for today
         cursor.execute(
             "SELECT * FROM EmojiFeedback WHERE UserID = %s AND DATE(SubmissionDate) = %s",
             (user_id, submission_date)
         )
-        existing_feedback = cursor.fetchone() #checking for existing feedback for a user on that specific day
-        cursor.close()
-        conn.close()
+        
+        # Fetch the result before closing the cursor
+        existing_feedback = cursor.fetchone() 
 
+
+        # Process the result
         if existing_feedback:
             emoji_map = {1: "😞", 2: "🙁", 3: "😐", 4: "🙂", 5: "😁"} #stores emojis into values to show on the frontend
             selected_emoji = emoji_map.get(existing_feedback['EmojiRating'], "😐")
+
+            cursor.fetchall()
+            cursor.close()
+            conn.close()
+
             return render_template(
                 'feedback_options.html',
                 selected_emoji=selected_emoji
             )
         else:
+            cursor.fetchall()
+            cursor.close()
+            conn.close()
             return render_template('logout.html') #no existing feedback then fill out for the first time
+           
     return redirect(url_for('login'))
 
 
@@ -132,6 +143,8 @@ def rate_day():
         )
         existing_feedback = cursor.fetchone()
 
+        cursor.fetchall()
+
         if existing_feedback:
             # Update the existing feedback
             cursor.execute(
@@ -142,15 +155,21 @@ def rate_day():
             # Insert new feedback
             cursor.execute(
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                (user_id, new_rating, datetime.now())
+                (user_id, new_rating, datetime.datetime.now())
             )
+
         conn.commit()
+
         cursor.close()
         conn.close()
+
         logout_user()
         return render_template('message.html', message="You have been logged out.")
 
     return redirect(url_for('login'))
+
+
+
 
 
 # Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
@@ -167,9 +186,13 @@ def my_profile():
         "SELECT Username FROM User WHERE userID = %s",
         (user_id,))
     username_data = cursor.fetchone()
+    cursor.fetchall()
+
+
     username = username_data['Username'] if username_data else None
 
-
+    cursor.close()
+    conn.close()
     return render_template('profile/my_profile.html', username=username)
 
 
@@ -179,21 +202,28 @@ def my_ratings():
     user_id = current_user.id  # Use Flask-Login's current_user
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
 
-    # Fetch today's emoji reaction (if any)
-    cursor.execute(
+    # Use the first cursor to fetch today's reaction
+    cursor1 = conn.cursor(dictionary=True)
+    cursor1.execute(
         "SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s AND DATE(submissiondate) = CURDATE()",
         (user_id,))
-    todays_reaction = cursor.fetchone()
+    todays_reaction = cursor1.fetchone()
+    cursor1.fetchall()
+    cursor1.close()  # Close the first cursor after use
 
-    # Fetch all emoji reactions from the past week, excluding today's reaction
-    cursor.execute("SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s", (user_id,))
-    all_reactions = cursor.fetchall()
+    # Use the second cursor to fetch all reactions
+    cursor2 = conn.cursor(dictionary=True)
+    cursor2.execute("SELECT emojirating, submissiondate FROM EmojiFeedback WHERE userID = %s", (user_id,))
+    all_reactions = cursor2.fetchall()
     all_reactions = sorted(all_reactions, key=lambda x: x['submissiondate'], reverse=True)
+    cursor2.fetchall()
+    cursor2.close()  # Close the second cursor after use
 
+    # Close the connection
+    conn.close()
 
-    return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)  
+    return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)
 
 @app.route('/my_points')
 @login_required
@@ -216,6 +246,7 @@ def my_points():
     for feedback in emoji_feedbacks:
         points_data.append({
             'date': feedback['SubmissionDate'],
+            'time': ' ',  # Save time
             'points': 3,
             'reason': 'You rated your day with emojis!'
         })
@@ -230,6 +261,7 @@ def my_points():
     for vote in votes:
         points_data.append({
             'date': vote['VotedDate'],
+            'time': vote['VotedDate'].strftime('%H:%M:%S'),  # Save time
             'points': 1,
             'reason': 'You voted on a suggestion!'
         })
@@ -244,6 +276,7 @@ def my_points():
     for suggestion in suggestions:
         points_data.append({
             'date': suggestion['CreatedDate'],
+            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),  # Save time
             'points': 5,
             'reason': 'You posted a new suggestion!'
         })
@@ -251,16 +284,22 @@ def my_points():
     # Calculate total points
     total_points = sum(item['points'] for item in points_data)
 
-    # Sort points data by date (newest first)
+    # Sort by both date and time (most recent event on top)
     points_data = sorted(
         points_data, 
-        key=lambda x: x['date'].date() if isinstance(x['date'], datetime.datetime) else x['date'], 
-        reverse=True
+        key=lambda x: (
+            # Convert to datetime if it's a date object
+            x['date'] if isinstance(x['date'], datetime.datetime) 
+            else datetime.datetime.combine(x['date'], datetime.time.min) 
+        ),
+        reverse=True  # Reverse to get the most recent on top
     )
+
     cursor.close()
     conn.close()
 
     return render_template('profile/my_points.html', points_data=points_data, total_points=total_points)
+
 
 
 @app.route('/my_suggestions')
@@ -503,7 +542,7 @@ def add_suggestion():
     user_id = current_user.id
     description = data.get("Description")
     comments = data.get("Comments") 
-    created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    created_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
    # if not user_id or not description:
    #     return jsonify({"error": user_id}), 400
