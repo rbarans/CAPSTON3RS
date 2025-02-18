@@ -217,7 +217,7 @@ def my_points():
         points_data.append({
             'date': feedback['SubmissionDate'],
             'points': 3,
-            'reason': 'Emoji Feedback'
+            'reason': 'You rated your day with emojis!'
         })
 
     # Fetch Votes
@@ -231,7 +231,7 @@ def my_points():
         points_data.append({
             'date': vote['VotedDate'],
             'points': 1,
-            'reason': 'Vote'
+            'reason': 'You voted on a suggestion!'
         })
 
     # Fetch Suggestions
@@ -245,7 +245,7 @@ def my_points():
         points_data.append({
             'date': suggestion['CreatedDate'],
             'points': 5,
-            'reason': 'Suggestion'
+            'reason': 'You posted a new suggestion!'
         })
 
     # Calculate total points
