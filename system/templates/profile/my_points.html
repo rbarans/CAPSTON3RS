@@ -28,7 +28,7 @@
                 <tr>
                     <td>{{ entry.date.strftime('%m/%d/%Y') }}</td>
                     <td>{{ entry.date.strftime('%I:%M %p') }}</td>
-                    <td>+{{ entry.points }}</td>
+                    <td>{{ entry.points }}</td>
                     <td>{{ entry.reason }}</td>
                 </tr>
                 {% endfor %}

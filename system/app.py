@@ -15,6 +15,7 @@ profile_bp = Blueprint('profile', __name__)
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem to persist session data
 app.config['SESSION_PERMANENT'] = True
 app.secret_key = os.urandom(24)  # Generates a random 24-byte secret key
+app.config['SESSION_COOKIE_NAME'] = 'your_session_cookie'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -247,7 +248,7 @@ def my_points():
         points_data.append({
             'date': feedback['SubmissionDate'],
             'time': ' ',  # Save time
-            'points': 3,
+            'points': +3,
             'reason': 'You rated your day with emojis!'
         })
 
@@ -262,24 +263,33 @@ def my_points():
         points_data.append({
             'date': vote['VotedDate'],
             'time': vote['VotedDate'].strftime('%H:%M:%S'),  # Save time
-            'points': 1,
+            'points': +1,
             'reason': 'You voted on a suggestion!'
         })
 
-    # Fetch Suggestions
+# Fetch Suggestions
     cursor.execute("""
         SELECT CreatedDate 
         FROM Suggestion
         WHERE UserID = %s
     """, (user_id,))
     suggestions = cursor.fetchall()
+
+
+    # Add +5 points for each suggestion (only if not already in history)
     for suggestion in suggestions:
+        # Append the points for this suggestion to points_data
         points_data.append({
             'date': suggestion['CreatedDate'],
-            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),  # Save time
-            'points': 5,
+            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),
+            'points': +5,
             'reason': 'You posted a new suggestion!'
         })
+
+    # Add points for deleted suggestions (stored in session)
+    if 'points_history' not in session:
+        session['points_history'] = []
+    points_data.extend(session['points_history'])
 
     # Calculate total points
     total_points = sum(item['points'] for item in points_data)
@@ -288,10 +298,9 @@ def my_points():
     points_data = sorted(
         points_data, 
         key=lambda x: (
-            # Convert to datetime if it's a date object
-            x['date'] if isinstance(x['date'], datetime.datetime) 
-            else datetime.datetime.combine(x['date'], datetime.time.min) 
+            x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
         ),
+
         reverse=True  # Reverse to get the most recent on top
     )
 
@@ -453,7 +462,7 @@ def change_password():
     cursor = conn.cursor(dictionary=True)
 
     # Fetch the current password (plain text)
-    cursor.execute("SELECT Password FROM User WHERE UserID = %s", (current_user.id,))
+    cursor.execute("SELECT Password FROM User WHERE UserID = %s", (user_id,))
     user = cursor.fetchone()
 
     if not user:
@@ -592,6 +601,7 @@ def update_suggestion(suggestion_id, description=None, comments=None):
 
 
 # Zar: function to delete a suggestion
+# Rana: updated to show in points history
 @app.route('/delete_suggestion', methods=['POST'])
 def del_suggestion():
     suggestion_id = request.form.get('SuggestionID')
@@ -600,17 +610,56 @@ def del_suggestion():
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({"message": "Suggestion deleted successfully"}), 200
+        cursor = conn.cursor(dictionary=True)
+
+        # Get the suggestion's creation date and UserID
+        cursor.execute("""
+            SELECT CreatedDate, UserID
+            FROM Suggestion
+            WHERE SuggestionID = %s
+        """, (suggestion_id,))
+        suggestion = cursor.fetchone()
+
+        if suggestion:
+            created_date = suggestion['CreatedDate']
+
+            # Check if points history exists, if not, create it
+            if 'points_history' not in session:
+                session['points_history'] = []
+
+            # Only add -5 if it hasn't already been added for this suggestion
+            session['points_history'].append({
+                    'date': created_date,
+                    'time': created_date.strftime('%H:%M:%S'),
+                    'points': -5,
+                    'reason': 'You deleted a post'
+            })
+
+            # Delete votes associated with the suggestion first
+            cursor.execute("""
+                DELETE FROM Vote
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+            conn.commit()
+
+            # Delete the suggestion itself
+            cursor.execute("""
+                DELETE FROM Suggestion
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+            conn.commit()
+
+            cursor.close()
+            conn.close()
+
+            return jsonify({"message": "Suggestion deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Suggestion not found"}), 404
+
     except Exception as e:
         print(f"Error: {e}")
-        #return jsonify({"error": str(e)}), 500
-        return jsonify({"error": "The suggestion has been voted on and can no longer be deleted."}), 500
-    
+        return jsonify({"error": "An error occurred while trying to delete the suggestion."}), 500
+
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
