@@ -2,7 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
-# from datetime import datetime
+from datetime import timedelta
 from turbo_flask import Turbo
 
 
@@ -37,6 +37,7 @@ class User(UserMixin):
         self.id = id
         self.username = username
 
+
 # Flask-Login user loader
 @login_manager.user_loader
 def load_user(user_id):
@@ -48,10 +49,33 @@ def load_user(user_id):
     conn.close()
     return User(user['UserID'], user['Username']) if user else None
 
+
 # Rana: route to home page
 @app.route('/')
 def home():
     return render_template('index.html')
+
+
+from datetime import datetime, timedelta
+
+# Rana: Function to check if user is locked out
+def is_user_locked(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    cursor.execute("SELECT failed_attempts, lockout_time FROM FailedAttempts WHERE UserID = %s", (user_id,))
+    record = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+
+    if record:
+        failed_attempts = record['failed_attempts']
+        lockout_time = record['lockout_time']
+        
+        if failed_attempts >= 5 and lockout_time and datetime.now() < lockout_time:
+            return True, lockout_time  # User is locked out
+    return False, None
 
 
 # Rana: route to log in to account
@@ -63,24 +87,62 @@ def login():
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM User WHERE Username = %s", (username,))
+        
+        # Fetch user details
+        cursor.execute("SELECT UserID, Username, Password FROM User WHERE Username = %s", (username,))
         user = cursor.fetchone()
-        cursor.close()
-        conn.close()
         
-        if user and user['Password'] == password:  # Compare password directly
+        if not user:
+            flash("User not found.", "danger")
+            return redirect(url_for('login'))
+        
+        user_id = user['UserID']
+
+        # Check if user is locked out
+        locked, lockout_time = is_user_locked(user_id)
+        if locked:
+            flash(f"Too many failed attempts. Try again at {lockout_time.strftime('%I:%M %p')}.", "danger")
+            return redirect(url_for('login'))
+        
+        if user['Password'] == password:
+            # Successful login, reset failed attempts
+            cursor.execute("DELETE FROM FailedAttempts WHERE UserID = %s", (user_id,))
+            conn.commit()
+            
             login_user(User(user['UserID'], user['Username']))
+            cursor.close()
+            conn.close()
             return redirect(url_for('home'))
-        elif user:  # User exists, but password is incorrect
-            flash("Incorrect password.", "danger")
-        else:  # User doesn't exist
-            flash("Username not found.", "danger")
-        
-        return redirect(url_for('login'))
+        else:
+            # Wrong password
+            cursor.execute("SELECT failed_attempts FROM FailedAttempts WHERE UserID = %s", (user_id,))
+            record = cursor.fetchone()
+            
+            if record:
+                failed_attempts = record['failed_attempts'] + 1
+                if failed_attempts >= 5:
+                    lockout_time = datetime.now() + timedelta(minutes=5)
+                    cursor.execute("UPDATE FailedAttempts SET failed_attempts = %s, lockout_time = %s WHERE UserID = %s",
+                                   (failed_attempts, lockout_time, user_id))
+                    flash("Too many failed attempts. You are locked out for 5 minutes.", "danger")
+                else:
+                    cursor.execute("UPDATE FailedAttempts SET failed_attempts = %s WHERE UserID = %s",
+                                   (failed_attempts, user_id))
+                    flash("Incorrect password.", "danger")
+            else:
+                cursor.execute("INSERT INTO FailedAttempts (UserID, failed_attempts, lockout_time) VALUES (%s, %s, NULL)",
+                               (user_id, 1))
+                flash("Incorrect password.", "danger")
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return redirect(url_for('login'))
     
     return render_template('login.html')
 
 
+# Rana: route to log out 
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
@@ -182,10 +244,7 @@ def rate_day():
     return redirect(url_for('login'))
 
 
-
-
-
-# Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
+# Rana: Route to profile 
 @app.route('/my_profile', methods=['GET', 'POST'])
 @login_required
 def my_profile():
@@ -201,7 +260,6 @@ def my_profile():
     username_data = cursor.fetchone()
     cursor.fetchall()
 
-
     username = username_data['Username'] if username_data else None
 
     cursor.close()
@@ -209,6 +267,7 @@ def my_profile():
     return render_template('profile/my_profile.html', username=username)
 
 
+# Rana: route to my ratings in profile
 @app.route('/my_ratings')
 @login_required
 def my_ratings():
@@ -235,9 +294,10 @@ def my_ratings():
 
     # Close the connection
     conn.close()
-
     return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)
 
+
+# Rana: route to my points in profile
 @app.route('/my_points')
 @login_required
 def my_points():
@@ -258,17 +318,6 @@ def my_points():
     # Calculate total points
     total_points = sum(item['Points'] for item in points_data)
 
-
-    # Sort by both date and time (most recent event on top)
-    # points_data = sorted(
-    #     points_data, 
-    #     key=lambda x: (
-    #         x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
-    #     ),
-
-    #     reverse=True  # Reverse to get the most recent on top
-    # )
-
     points_data = sorted(
         points_data, 
         key=lambda x: (
@@ -277,14 +326,12 @@ def my_points():
         reverse=True  # Reverse to get the most recent on top
     )
 
-
     cursor.close()
     conn.close()
-
     return render_template('profile/my_points.html', points_data=points_data, total_points=total_points)
 
 
-
+# Rana: route to my suggestions in profile
 @app.route('/my_suggestions')
 @login_required
 def my_suggestions():
@@ -338,12 +385,11 @@ def my_suggestions():
 
     cursor.close()  # Close the cursor after use
     conn.close()  # Close the connection
-
     return render_template('profile/my_suggestions.html', suggestions=suggestions, 
                            suggestion_filter=suggestion_filter, suggestion_keyword=suggestion_keyword)
 
 
-
+# Rana: route to my votes in profile
 @app.route('/my_votes')
 @login_required
 def my_votes():
@@ -403,6 +449,7 @@ def my_votes():
     return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
 
 
+# Rana: route to my account in profile
 @app.route('/my_account')
 @login_required  # Ensure only logged-in users can access
 def my_account():
@@ -420,6 +467,7 @@ def my_account():
     return render_template('profile/my_account.html', user=user) 
 
 
+# Rana: route to change password in my account 
 @app.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
@@ -528,7 +576,6 @@ def add_suggestion():
  
     comments = data.get("Comments")  
  
-
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) 
@@ -587,7 +634,6 @@ def update_suggestion(suggestion_id, description=None, comments=None):
 
 
 # Zar: function to delete a suggestion
-# Rana: updated to show in points history
 @app.route('/delete_suggestion', methods=['POST'])
 def del_suggestion():
     user_id = current_user.id
@@ -610,7 +656,6 @@ def del_suggestion():
         suggestion = cursor.fetchone()
 
         if suggestion:
-            created_date = suggestion['CreatedDate']
 
             # Delete the suggestion itself
             cursor.execute("""
@@ -638,10 +683,10 @@ def del_suggestion():
         else:
             return jsonify({"error": "Suggestion not found"}), 404
 
- 
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while trying to delete the suggestion."}), 500
+
 
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
@@ -754,10 +799,10 @@ def vote():
                 (user_id, suggestion_id, vote_value)
             )
             
-            # Zar : Updating 1 point for Voting                                       
+            # Zar: Updating 1 point for Voting                                       
             cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (user_id,))
 
-            # Rana : Saving action for Point History
+            # Rana: Saving action for Point History
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
