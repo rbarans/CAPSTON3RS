@@ -2,7 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from turbo_flask import Turbo
 
 
@@ -53,10 +53,43 @@ def load_user(user_id):
 # Rana: route to home page
 @app.route('/')
 def home():
-    return render_template('index.html')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    yesterday = (datetime.now() - timedelta(days=1)).date()
+
+    # Count total users who submitted feedback yesterday
+    cursor.execute("""
+        SELECT COUNT(DISTINCT UserID) AS total_users 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s
+    """, (yesterday,))
+    total_users = cursor.fetchone()['total_users']
+
+    # Count how many users submitted each emoji rating
+    cursor.execute("""
+        SELECT EmojiRating, COUNT(*) AS count 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s 
+        GROUP BY EmojiRating
+    """, (yesterday,))
+    
+    emoji_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Default values
+    for row in cursor.fetchall():
+        emoji_counts[row['EmojiRating']] = row['count']
+
+    cursor.close()
+    conn.close()
+
+    return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts})
 
 
-from datetime import datetime, timedelta
+
+
+
+
+
 
 # Rana: Function to check if user is locked out
 def is_user_locked(user_id):
@@ -656,6 +689,19 @@ def del_suggestion():
         suggestion = cursor.fetchone()
 
         if suggestion:
+
+            # Check if there are any votes associated with the suggestion
+            cursor.execute("""
+                SELECT COUNT(*) AS vote_count
+                FROM Vote
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+            vote_count = cursor.fetchone()['vote_count']
+
+            if vote_count > 0:
+                # If votes exist, return an error message
+                return jsonify({"error": "Suggestion cannot be deleted because it has been voted on."}), 400
+
 
             # Delete the suggestion itself
             cursor.execute("""
