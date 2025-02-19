@@ -2,7 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from turbo_flask import Turbo
 
 
@@ -53,10 +53,43 @@ def load_user(user_id):
 # Rana: route to home page
 @app.route('/')
 def home():
-    return render_template('index.html')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    yesterday = (datetime.now() - timedelta(days=1)).date()
+
+    # Count total users who submitted feedback yesterday
+    cursor.execute("""
+        SELECT COUNT(DISTINCT UserID) AS total_users 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s
+    """, (yesterday,))
+    total_users = cursor.fetchone()['total_users']
+
+    # Count how many users submitted each emoji rating
+    cursor.execute("""
+        SELECT EmojiRating, COUNT(*) AS count 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s 
+        GROUP BY EmojiRating
+    """, (yesterday,))
+    
+    emoji_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Default values
+    for row in cursor.fetchall():
+        emoji_counts[row['EmojiRating']] = row['count']
+
+    cursor.close()
+    conn.close()
+
+    return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts})
 
 
-from datetime import datetime, timedelta
+
+
+
+
+
 
 # Rana: Function to check if user is locked out
 def is_user_locked(user_id):
@@ -152,7 +185,7 @@ def logout():
             logout_user()  # Log the user out
             return render_template('message.html', message="You have been logged out.")
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -194,7 +227,7 @@ def logout():
 def rate_day():
     if current_user.is_authenticated:
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
         new_rating = int(request.form['rating'])
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -218,7 +251,7 @@ def rate_day():
             # Insert new feedback
             cursor.execute(
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                (user_id, new_rating, datetime.datetime.now())
+                (user_id, new_rating, datetime.now())
             )
             
             # Zar : Updating 3 point for Rating Day                                      
@@ -230,7 +263,7 @@ def rate_day():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, 3, "Rated the day",  datetime.datetime.now()))
+            """, (user_id, 3, "Rated the day",  datetime.now()))
  
 
         conn.commit()
@@ -321,7 +354,7 @@ def my_points():
     points_data = sorted(
         points_data, 
         key=lambda x: (
-            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime.datetime) else x['ActionDate']
+            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime) else x['ActionDate']
         ),
         reverse=True  # Reverse to get the most recent on top
     )
@@ -585,7 +618,7 @@ def add_suggestion():
                 INSERT INTO Suggestion (UserID, Description, Comments, CreatedDate)
                 VALUES (%s, %s, %s, %s)
                 """
-        cursor.execute(query, (user_id, description, comments, datetime.datetime.now()))
+        cursor.execute(query, (user_id, description, comments, datetime.now()))
          
         # Zar : Updating 5 points for Posting Suggestion                                      
         cursor.execute(
@@ -596,7 +629,7 @@ def add_suggestion():
         cursor.execute("""
             INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
             VALUES (%s, %s, %s, %s)
-        """, (user_id, 5, "Posted a suggestion",  datetime.datetime.now()))
+        """, (user_id, 5, "Posted a suggestion",  datetime.now()))
  
         conn.commit()
         cursor.close()
@@ -657,6 +690,19 @@ def del_suggestion():
 
         if suggestion:
 
+            # Check if there are any votes associated with the suggestion
+            cursor.execute("""
+                SELECT COUNT(*) AS vote_count
+                FROM Vote
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+            vote_count = cursor.fetchone()['vote_count']
+
+            if vote_count > 0:
+                # If votes exist, return an error message
+                return jsonify({"error": "Suggestion cannot be deleted because it has been voted on."}), 400
+
+
             # Delete the suggestion itself
             cursor.execute("""
                 DELETE FROM Suggestion
@@ -672,7 +718,7 @@ def del_suggestion():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, -5, "Deleted a suggestion",  datetime.datetime.now()))
+            """, (user_id, -5, "Deleted a suggestion", datetime.now()))
             
             conn.commit()
 
@@ -806,7 +852,7 @@ def vote():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, 1, "Voted on a suggestion",  datetime.datetime.now()))
+            """, (user_id, 1, "Voted on a suggestion",  datetime.now()))
 
             # Get the user who owns the suggestion
             cursor.execute("SELECT UserID FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
@@ -822,7 +868,7 @@ def vote():
                 cursor.execute("""
                     INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                     VALUES (%s, %s, %s, %s)
-                """, (receiving_userid, 1, "Received a vote", datetime.datetime.now()))
+                """, (receiving_userid, 1, "Received a vote", datetime.now()))
 
         conn.commit()
         # Update the Suggestion table with new vote counts
