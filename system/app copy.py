@@ -163,12 +163,6 @@ def rate_day():
             cursor.execute(
                 "UPDATE User SET Points = Points + 3  WHERE UserID = %s", (user_id,)
             )
-
-            # Rana : Saving action for Point History
-            cursor.execute("""
-                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
-                VALUES (%s, %s, %s, %s)
-            """, (user_id, 3, "Rated the day",  datetime.datetime.now()))
  
 
         conn.commit()
@@ -246,37 +240,75 @@ def my_points():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
+    # Get points history (EmojiFeedback, Vote, Suggestion)
+    points_data = []
+
+    # Fetch Emoji Feedbacks
     cursor.execute("""
-            SELECT PointID, Points, Action, ActionDate 
-            FROM PointsHistory
-            WHERE UserID = %s
-            ORDER BY ActionDate DESC
-        """, (user_id,))
-        
-    points_data = cursor.fetchall()
+        SELECT SubmissionDate, EmojiRating 
+        FROM EmojiFeedback
+        WHERE UserID = %s
+    """, (user_id,))
+    emoji_feedbacks = cursor.fetchall()
+    for feedback in emoji_feedbacks:
+        points_data.append({
+            'date': feedback['SubmissionDate'],
+            'time': ' ',  # Save time
+            'points': +3,
+            'reason': 'You rated your day with emojis!'
+        })
+
+    # Fetch Votes
+    cursor.execute("""
+        SELECT VotedDate, VoteType 
+        FROM Vote
+        WHERE UserID = %s
+    """, (user_id,))
+    votes = cursor.fetchall()
+    for vote in votes:
+        points_data.append({
+            'date': vote['VotedDate'],
+            'time': vote['VotedDate'].strftime('%H:%M:%S'),  # Save time
+            'points': +1,
+            'reason': 'You voted on a suggestion!'
+        })
+
+# Fetch Suggestions
+    cursor.execute("""
+        SELECT CreatedDate 
+        FROM Suggestion
+        WHERE UserID = %s
+    """, (user_id,))
+    suggestions = cursor.fetchall()
+
+
+    # Add +5 points for each suggestion (only if not already in history)
+    for suggestion in suggestions:
+        # Append the points for this suggestion to points_data
+        points_data.append({
+            'date': suggestion['CreatedDate'],
+            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),
+            'points': +5,
+            'reason': 'You posted a new suggestion!'
+        })
+
+    # Add points for deleted suggestions (stored in session)
+    if 'points_history' not in session:
+        session['points_history'] = []
+    points_data.extend(session['points_history'])
 
     # Calculate total points
-    total_points = sum(item['Points'] for item in points_data)
-
+    total_points = sum(item['points'] for item in points_data)
 
     # Sort by both date and time (most recent event on top)
-    # points_data = sorted(
-    #     points_data, 
-    #     key=lambda x: (
-    #         x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
-    #     ),
-
-    #     reverse=True  # Reverse to get the most recent on top
-    # )
-
     points_data = sorted(
         points_data, 
         key=lambda x: (
-            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime.datetime) else x['ActionDate']
+            x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
         ),
+
         reverse=True  # Reverse to get the most recent on top
     )
-
 
     cursor.close()
     conn.close()
@@ -401,7 +433,6 @@ def my_votes():
     conn.close()  # Close the connection
 
     return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
-
 
 @app.route('/my_account')
 @login_required  # Ensure only logged-in users can access
@@ -544,12 +575,6 @@ def add_suggestion():
         cursor.execute(
             "UPDATE User SET Points = Points + 5  WHERE UserID = %s", (user_id,)
         )
-        
-        # Rana : Saving action for Point History
-        cursor.execute("""
-            INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
-            VALUES (%s, %s, %s, %s)
-        """, (user_id, 5, "Posted a suggestion",  datetime.datetime.now()))
  
         conn.commit()
         cursor.close()
@@ -612,6 +637,25 @@ def del_suggestion():
         if suggestion:
             created_date = suggestion['CreatedDate']
 
+            # Check if points history exists, if not, create it
+            if 'points_history' not in session:
+                session['points_history'] = []
+
+            # Only add -5 if it hasn't already been added for this suggestion
+            session['points_history'].append({
+                    'date': created_date,
+                    'time': created_date.strftime('%H:%M:%S'),
+                    'points': -5,
+                    'reason': 'You deleted a post'
+            })
+
+            # Delete votes associated with the suggestion first
+            #cursor.execute("""
+            #    DELETE FROM Vote
+            #    WHERE SuggestionID = %s
+            #""", (suggestion_id,))
+            #conn.commit()
+
             # Delete the suggestion itself
             cursor.execute("""
                 DELETE FROM Suggestion
@@ -622,13 +666,7 @@ def del_suggestion():
             cursor.execute(
                 "UPDATE User SET Points = GREATEST(Points - 5, 0) WHERE UserID = %s", (user_id,)
             )
-
-            # Rana : Saving action for Point History
-            cursor.execute("""
-                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
-                VALUES (%s, %s, %s, %s)
-            """, (user_id, -5, "Deleted a suggestion",  datetime.datetime.now()))
-            
+        
             conn.commit()
 
             cursor.close()
@@ -757,29 +795,14 @@ def vote():
             # Zar : Updating 1 point for Voting                                       
             cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (user_id,))
 
-            # Rana : Saving action for Point History
-            cursor.execute("""
-                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
-                VALUES (%s, %s, %s, %s)
-            """, (user_id, 1, "Voted on a suggestion",  datetime.datetime.now()))
 
-            # Get the user who owns the suggestion
             cursor.execute("SELECT UserID FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
             suggestion_user = cursor.fetchone()
+            receiving_userid = suggestion_user['UserID']
+            
+            # Zar : Updating 1 point for Receiving Vote 
+            cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (receiving_userid,))
 
-            if suggestion_user:
-                receiving_userid = suggestion_user['UserID']
-
-                # Zar: Updating 1 point for Receiving Vote 
-                cursor.execute("UPDATE User SET Points = Points + 1 WHERE UserID = %s", (receiving_userid,))
-
-                # Rana: Saving action for Point History
-                cursor.execute("""
-                    INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
-                    VALUES (%s, %s, %s, %s)
-                """, (receiving_userid, 1, "Received a vote", datetime.datetime.now()))
-
-        conn.commit()
         # Update the Suggestion table with new vote counts
         update_suggestion_query = """
             UPDATE Suggestion
