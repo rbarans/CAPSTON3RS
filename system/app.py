@@ -152,7 +152,7 @@ def logout():
             logout_user()  # Log the user out
             return render_template('message.html', message="You have been logged out.")
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -194,7 +194,7 @@ def logout():
 def rate_day():
     if current_user.is_authenticated:
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
         new_rating = int(request.form['rating'])
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -218,7 +218,7 @@ def rate_day():
             # Insert new feedback
             cursor.execute(
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                (user_id, new_rating, datetime.datetime.now())
+                (user_id, new_rating, datetime.now())
             )
             
             # Zar : Updating 3 point for Rating Day                                      
@@ -230,7 +230,7 @@ def rate_day():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, 3, "Rated the day",  datetime.datetime.now()))
+            """, (user_id, 3, "Rated the day",  datetime.now()))
  
 
         conn.commit()
@@ -321,7 +321,7 @@ def my_points():
     points_data = sorted(
         points_data, 
         key=lambda x: (
-            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime.datetime) else x['ActionDate']
+            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime) else x['ActionDate']
         ),
         reverse=True  # Reverse to get the most recent on top
     )
@@ -585,7 +585,7 @@ def add_suggestion():
                 INSERT INTO Suggestion (UserID, Description, Comments, CreatedDate)
                 VALUES (%s, %s, %s, %s)
                 """
-        cursor.execute(query, (user_id, description, comments, datetime.datetime.now()))
+        cursor.execute(query, (user_id, description, comments, datetime.now()))
          
         # Zar : Updating 5 points for Posting Suggestion                                      
         cursor.execute(
@@ -596,7 +596,7 @@ def add_suggestion():
         cursor.execute("""
             INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
             VALUES (%s, %s, %s, %s)
-        """, (user_id, 5, "Posted a suggestion",  datetime.datetime.now()))
+        """, (user_id, 5, "Posted a suggestion",  datetime.now()))
  
         conn.commit()
         cursor.close()
@@ -672,7 +672,7 @@ def del_suggestion():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, -5, "Deleted a suggestion",  datetime.datetime.now()))
+            """, (user_id, -5, "Deleted a suggestion", datetime.now()))
             
             conn.commit()
 
@@ -806,7 +806,7 @@ def vote():
             cursor.execute("""
                 INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, 1, "Voted on a suggestion",  datetime.datetime.now()))
+            """, (user_id, 1, "Voted on a suggestion",  datetime.now()))
 
             # Get the user who owns the suggestion
             cursor.execute("SELECT UserID FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
@@ -822,7 +822,7 @@ def vote():
                 cursor.execute("""
                     INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
                     VALUES (%s, %s, %s, %s)
-                """, (receiving_userid, 1, "Received a vote", datetime.datetime.now()))
+                """, (receiving_userid, 1, "Received a vote", datetime.now()))
 
         conn.commit()
         # Update the Suggestion table with new vote counts
