@@ -18,8 +18,8 @@
 
     <div class="container">
         <h1>Create Your Account</h1>
-        <form id="registerForm" method="POST">
-            <table class="createaccount-table">
+        <form id="registerForm" method="POST" text-align="center">
+            <table class="createaccount-table" style="width:auto !important">
                 <tr>
                     <td><label for="username">User Name:</label></td>
                     <td><input type="text" id="username" name="username" required placeholder="Enter your full name">
@@ -33,9 +33,12 @@
                 <tr>
                     <td><label for="confirm_password">Confirm Password:</label></td>
                     <td><input type="password" id="confirm_password" name="confirm_password" required
-                            placeholder="Confirm your password" onkeyup="checkPassword();">
-                        <span id="message"></span>
+                            placeholder="Confirm your password" onkeyup="checkPassword();">                        
                     </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td style="padding-top: 0px !important;"><span id="message"></span></td>
                 </tr>
                 <tr>
                     <td colspan="2" style="text-align: center;">

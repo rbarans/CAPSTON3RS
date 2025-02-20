@@ -1,0 +1,172 @@
+<!-- Created by Zar -->
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<head>
+    <meta charset="utf-8" />
+    <title>User Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+    <!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        button
+        { 
+            padding: 5px 5px !important;
+            margin: 5px !important; 
+        }
+         
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>User Management</h1>
+        <a style="float: right;" class="action-button" href="{{ url_for('createaccount') }}">Create Account</a>
+        <table class="suggestion-table">
+            <tr>
+                <th>User Name</th>
+                <th>Points</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.Username }}</td>
+                <td>{{ user.Points }}</td>
+                {% if user.Status == "Active" %}
+                    <td style="color:green;">{{ user.Status }}</td>
+                {% else %}
+                    <td style="color:red;">{{ user.Status }}</td>
+                {% endif %}
+                <td>
+                    <button onclick="editUser('{{ user.UserID }}', '{{ user.Username }}', '{{ user.Password }}')">Edit</button>
+                    {% if user.Status == "Active" %}
+                        <button onclick="deactivateUser('{{ user.UserID }}')">Deactivate</button>
+                    {% else %}
+                        <button onclick="reactivateUser('{{ user.UserID }}')">Reactivate</button>
+                    {% endif %}
+
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+
+
+        <script>
+            function editUser(id, username, password) {
+                Swal.fire({
+                    title: 'Edit User',
+                    html: `
+                    <div id="editForm"> 
+                        <form id="updateForm">
+                             <table style="width:100%;"> 
+                                <tr>
+                                    <td style="padding:0px !important;"><label>Name:</label></td>
+                                    <td style="padding:0px !important;"> 
+                                        <input type="hidden" id="userId" value="${id}" />
+                                        <input type="text" id="userName" class="swal2-input" value="${username}" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0px !important;"><label>Password:</label></td>
+                                    <td style="padding:0px !important;"><input type="password" id="password" class="swal2-input" value="${password}"  /></td>
+                                </tr>
+                            </table> 
+                        </form>
+                    </div> 
+                    `,
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const userId = document.getElementById('userId').value;
+                        const userName = document.getElementById('userName').value;
+                        const password = document.getElementById('password').value; 
+                        return { id: userId, username: userName, password: password };
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Update',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id: result.value.id,
+                                username: result.value.username,
+                                password: result.value.password
+                            })
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    Swal.fire('Success', 'User updated successfully!', 'success').then(() => {
+
+                                        location.reload();
+                                    });
+                                } else {
+
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                    }
+                });
+            }
+
+            function deactivateUser(id) {
+                fetch('/deactivate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            Swal.fire('Success', 'User deactivated successfully!', 'success').then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            function reactivateUser(id) {
+                fetch('/reactivate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            Swal.fire('Success', 'User reactivated successfully!', 'success').then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        </script>
+        </script>
+    </div>
+
+</body>
+
+{% endblock %}

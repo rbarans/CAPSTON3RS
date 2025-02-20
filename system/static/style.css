@@ -136,6 +136,17 @@ h1 {
     background-color: #e692b7;
 } 
 
+.link{
+    color: #3498db;
+    text-decoration: none;
+}
+
+.link:hover { 
+    text-decoration: underline;
+    color: #0073e6; /* Blue text */
+    cursor: pointer;
+}
+
 /* Navigation Bar */
  
 .navbar {
@@ -219,13 +230,13 @@ h1 {
 /* Create Account Page */
 
 .createaccount-table {
-    width:40%;
+    width:50%;
     border-collapse: collapse;
 }
 
 .createaccount-table th,
 .createaccount-table td {
-    padding: 1rem;
+    /*padding: 1rem;*/
     text-align: left;
 }
 
