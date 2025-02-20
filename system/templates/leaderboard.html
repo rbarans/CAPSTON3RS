@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}Leaderboard{% endblock %}
 {% block content %}
+<<<<<<< HEAD
+
+=======
 <style>
     .leaderboard {
         width: 50%;
@@ -22,6 +25,7 @@
         background-color: #f2f2f2;
     }
 </style>
+>>>>>>> origin/main
 <div class="leaderboard">
     <h2>Leaderboard</h2>
         <table>
@@ -42,6 +46,33 @@
         </table>
 </div>
 <script>
+<<<<<<< HEAD
+    document.addEventListener("DOMContentLoaded", function() {
+        const leaderboardBody = document.getElementById("leaderboard-body");
+
+        if (!leaderboardBody || leaderboardBody.children.length > 0) {
+            return;
+        }
+
+        fetch("/leaderboard-data")
+        .then (response => response.json())
+        .then(data => {
+            data.forEach(user => {
+                const row = document.createElement("tr");
+                const username = document.createElement("td");
+                const score = document.createElement("td");
+
+                username.textContent = user.username;
+                score.textContent = user.score !== null ? user.score : "-";
+
+                row.appendChild(username);
+                row.appendChild(score);
+
+                leaderboardBody.appendChild(row);
+            });
+        })
+        .catch(error => console.error("Cannot load leaderboard:", error));
+=======
     document.addEventListener("DOMContentLoaded", funciton() {
         const users = [
             {username: "user1", score: 500},
@@ -65,6 +96,7 @@
             leaderboardBody.appendChild(row);
         
         });
+>>>>>>> origin/main
     });
 </script>
 {% endblock %}
