@@ -2,7 +2,7 @@ import mysql.connector, os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify , Blueprint, session
 from flask_login import LoginManager, login_user, logout_user, current_user, UserMixin, login_required
 import datetime
-# from datetime import datetime
+from datetime import datetime, timedelta
 from turbo_flask import Turbo
 
 
@@ -42,6 +42,7 @@ class User(UserMixin):
     def IsAdmin(self):
         return self.isadmin
 
+
 # Flask-Login user loader
 @login_manager.user_loader
 def load_user(user_id):
@@ -54,10 +55,66 @@ def load_user(user_id):
     return User(user['UserID'], user['Username'], user['IsAdmin']) if user else None   # Zar: added isadmin
 
 
+
 # Rana: route to home page
 @app.route('/')
 def home():
-    return render_template('index.html')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    yesterday = (datetime.now() - timedelta(days=1)).date()
+
+    # Count total users who submitted feedback yesterday
+    cursor.execute("""
+        SELECT COUNT(DISTINCT UserID) AS total_users 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s
+    """, (yesterday,))
+    total_users = cursor.fetchone()['total_users']
+
+    # Count how many users submitted each emoji rating
+    cursor.execute("""
+        SELECT EmojiRating, COUNT(*) AS count 
+        FROM EmojiFeedback 
+        WHERE Date(SubmissionDate) = %s 
+        GROUP BY EmojiRating
+    """, (yesterday,))
+    
+    emoji_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Default values
+    for row in cursor.fetchall():
+        emoji_counts[row['EmojiRating']] = row['count']
+
+    cursor.close()
+    conn.close()
+
+    return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts})
+
+
+
+
+
+
+
+
+# Rana: Function to check if user is locked out
+def is_user_locked(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    cursor.execute("SELECT failed_attempts, lockout_time FROM FailedAttempts WHERE UserID = %s", (user_id,))
+    record = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+
+    if record:
+        failed_attempts = record['failed_attempts']
+        lockout_time = record['lockout_time']
+        
+        if failed_attempts >= 5 and lockout_time and datetime.now() < lockout_time:
+            return True, lockout_time  # User is locked out
+    return False, None
 
 
 # Rana: route to log in to account
@@ -69,24 +126,65 @@ def login():
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+ 
+        # Fetch user details
         cursor.execute("SELECT * FROM User WHERE Username = %s AND IsActive = 1", (username,)) #Zar : added IsActive
+ 
         user = cursor.fetchone()
-        cursor.close()
-        conn.close()
         
-        if user and user['Password'] == password:  # Compare password directly
+ 
+        if not user:
+            flash("User not found.", "danger")
+            return redirect(url_for('login'))
+        
+        user_id = user['UserID']
+
+        # Check if user is locked out
+        locked, lockout_time = is_user_locked(user_id)
+        if locked:
+            flash(f"Too many failed attempts. Try again at {lockout_time.strftime('%I:%M %p')}.", "danger")
+            return redirect(url_for('login'))
+        
+        if user['Password'] == password:
+            # Successful login, reset failed attempts
+            cursor.execute("DELETE FROM FailedAttempts WHERE UserID = %s", (user_id,))
+            conn.commit()
+            
             login_user(User(user['UserID'], user['Username'], user['IsAdmin']))   # Zar: added isadmin
+            cursor.close()
+            conn.close()
+ 
             return redirect(url_for('home'))
-        elif user:  # User exists, but password is incorrect
-            flash("Incorrect password.", "danger")
-        else:  # User doesn't exist
-            flash("Username not found.", "danger")
-        
-        return redirect(url_for('login'))
+        else:
+            # Wrong password
+            cursor.execute("SELECT failed_attempts FROM FailedAttempts WHERE UserID = %s", (user_id,))
+            record = cursor.fetchone()
+            
+            if record:
+                failed_attempts = record['failed_attempts'] + 1
+                if failed_attempts >= 5:
+                    lockout_time = datetime.now() + timedelta(minutes=5)
+                    cursor.execute("UPDATE FailedAttempts SET failed_attempts = %s, lockout_time = %s WHERE UserID = %s",
+                                   (failed_attempts, lockout_time, user_id))
+                    flash("Too many failed attempts. You are locked out for 5 minutes.", "danger")
+                else:
+                    cursor.execute("UPDATE FailedAttempts SET failed_attempts = %s WHERE UserID = %s",
+                                   (failed_attempts, user_id))
+                    flash("Incorrect password.", "danger")
+            else:
+                cursor.execute("INSERT INTO FailedAttempts (UserID, failed_attempts, lockout_time) VALUES (%s, %s, NULL)",
+                               (user_id, 1))
+                flash("Incorrect password.", "danger")
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return redirect(url_for('login'))
     
     return render_template('login.html')
 
 
+# Rana: route to log out 
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
@@ -96,7 +194,7 @@ def logout():
             logout_user()  # Log the user out
             return render_template('message.html', message="You have been logged out.")
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -138,7 +236,7 @@ def logout():
 def rate_day():
     if current_user.is_authenticated:
         user_id = current_user.id
-        submission_date = datetime.datetime.now().date()
+        submission_date = datetime.now().date()
         new_rating = int(request.form['rating'])
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -162,13 +260,19 @@ def rate_day():
             # Insert new feedback
             cursor.execute(
                 "INSERT INTO EmojiFeedback (UserID, EmojiRating, SubmissionDate) VALUES (%s, %s, %s)",
-                (user_id, new_rating, datetime.datetime.now())
+                (user_id, new_rating, datetime.now())
             )
             
             # Zar : Updating 3 point for Rating Day                                      
             cursor.execute(
                 "UPDATE User SET Points = Points + 3  WHERE UserID = %s", (user_id,)
             )
+
+            # Rana : Saving action for Point History
+            cursor.execute("""
+                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, 3, "Rated the day",  datetime.now()))
  
 
         conn.commit()
@@ -182,10 +286,7 @@ def rate_day():
     return redirect(url_for('login'))
 
 
-
-
-
-# Rana: Route to profile (showing my points, my suggestions, my daily ratings, my votes)
+# Rana: Route to profile 
 @app.route('/my_profile', methods=['GET', 'POST'])
 @login_required
 def my_profile():
@@ -201,7 +302,6 @@ def my_profile():
     username_data = cursor.fetchone()
     cursor.fetchall()
 
-
     username = username_data['Username'] if username_data else None
 
     cursor.close()
@@ -209,6 +309,7 @@ def my_profile():
     return render_template('profile/my_profile.html', username=username)
 
 
+# Rana: route to my ratings in profile
 @app.route('/my_ratings')
 @login_required
 def my_ratings():
@@ -235,9 +336,10 @@ def my_ratings():
 
     # Close the connection
     conn.close()
-
     return render_template('profile/my_ratings.html', todays_reaction=todays_reaction, all_reactions=all_reactions)
 
+
+# Rana: route to my points in profile
 @app.route('/my_points')
 @login_required
 def my_points():
@@ -246,83 +348,32 @@ def my_points():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Get points history (EmojiFeedback, Vote, Suggestion)
-    points_data = []
-
-    # Fetch Emoji Feedbacks
     cursor.execute("""
-        SELECT SubmissionDate, EmojiRating 
-        FROM EmojiFeedback
-        WHERE UserID = %s
-    """, (user_id,))
-    emoji_feedbacks = cursor.fetchall()
-    for feedback in emoji_feedbacks:
-        points_data.append({
-            'date': feedback['SubmissionDate'],
-            'time': ' ',  # Save time
-            'points': +3,
-            'reason': 'You rated your day with emojis!'
-        })
-
-    # Fetch Votes
-    cursor.execute("""
-        SELECT VotedDate, VoteType 
-        FROM Vote
-        WHERE UserID = %s
-    """, (user_id,))
-    votes = cursor.fetchall()
-    for vote in votes:
-        points_data.append({
-            'date': vote['VotedDate'],
-            'time': vote['VotedDate'].strftime('%H:%M:%S'),  # Save time
-            'points': +1,
-            'reason': 'You voted on a suggestion!'
-        })
-
-# Fetch Suggestions
-    cursor.execute("""
-        SELECT CreatedDate 
-        FROM Suggestion
-        WHERE UserID = %s
-    """, (user_id,))
-    suggestions = cursor.fetchall()
-
-
-    # Add +5 points for each suggestion (only if not already in history)
-    for suggestion in suggestions:
-        # Append the points for this suggestion to points_data
-        points_data.append({
-            'date': suggestion['CreatedDate'],
-            'time': suggestion['CreatedDate'].strftime('%H:%M:%S'),
-            'points': +5,
-            'reason': 'You posted a new suggestion!'
-        })
-
-    # Add points for deleted suggestions (stored in session)
-    if 'points_history' not in session:
-        session['points_history'] = []
-    points_data.extend(session['points_history'])
+            SELECT PointID, Points, Action, ActionDate 
+            FROM PointsHistory
+            WHERE UserID = %s
+            ORDER BY ActionDate DESC
+        """, (user_id,))
+        
+    points_data = cursor.fetchall()
 
     # Calculate total points
-    total_points = sum(item['points'] for item in points_data)
+    total_points = sum(item['Points'] for item in points_data)
 
-    # Sort by both date and time (most recent event on top)
     points_data = sorted(
         points_data, 
         key=lambda x: (
-            x['date'].replace(tzinfo=None) if isinstance(x['date'], datetime.datetime) else x['date']
+            x['ActionDate'].replace(tzinfo=None) if isinstance(x['ActionDate'], datetime) else x['ActionDate']
         ),
-
         reverse=True  # Reverse to get the most recent on top
     )
 
     cursor.close()
     conn.close()
-
     return render_template('profile/my_points.html', points_data=points_data, total_points=total_points)
 
 
-
+# Rana: route to my suggestions in profile
 @app.route('/my_suggestions')
 @login_required
 def my_suggestions():
@@ -376,12 +427,11 @@ def my_suggestions():
 
     cursor.close()  # Close the cursor after use
     conn.close()  # Close the connection
-
     return render_template('profile/my_suggestions.html', suggestions=suggestions, 
                            suggestion_filter=suggestion_filter, suggestion_keyword=suggestion_keyword)
 
 
-
+# Rana: route to my votes in profile
 @app.route('/my_votes')
 @login_required
 def my_votes():
@@ -440,6 +490,8 @@ def my_votes():
 
     return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
 
+
+# Rana: route to my account in profile
 @app.route('/my_account')
 @login_required  # Ensure only logged-in users can access
 def my_account():
@@ -457,6 +509,7 @@ def my_account():
     return render_template('profile/my_account.html', user=user) 
 
 
+# Rana: route to change password in my account 
 @app.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
@@ -658,7 +711,6 @@ def add_suggestion():
  
     comments = data.get("Comments")  
  
-
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) 
@@ -668,12 +720,18 @@ def add_suggestion():
                 INSERT INTO Suggestion (UserID, Description, Comments, CreatedDate)
                 VALUES (%s, %s, %s, %s)
                 """
-        cursor.execute(query, (user_id, description, comments, datetime.datetime.now()))
+        cursor.execute(query, (user_id, description, comments, datetime.now()))
          
         # Zar : Updating 5 points for Posting Suggestion                                      
         cursor.execute(
             "UPDATE User SET Points = Points + 5  WHERE UserID = %s", (user_id,)
         )
+        
+        # Rana : Saving action for Point History
+        cursor.execute("""
+            INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, 5, "Posted a suggestion",  datetime.now()))
  
         conn.commit()
         cursor.close()
@@ -688,7 +746,6 @@ def add_suggestion():
  
 
 # Zar: function to delete a suggestion
-# Rana: updated to show in points history
 @app.route('/delete_suggestion', methods=['POST'])
 def del_suggestion():
     user_id = current_user.id
@@ -711,26 +768,19 @@ def del_suggestion():
         suggestion = cursor.fetchone()
 
         if suggestion:
-            created_date = suggestion['CreatedDate']
 
-            # Check if points history exists, if not, create it
-            if 'points_history' not in session:
-                session['points_history'] = []
+            # Check if there are any votes associated with the suggestion
+            cursor.execute("""
+                SELECT COUNT(*) AS vote_count
+                FROM Vote
+                WHERE SuggestionID = %s
+            """, (suggestion_id,))
+            vote_count = cursor.fetchone()['vote_count']
 
-            # Only add -5 if it hasn't already been added for this suggestion
-            session['points_history'].append({
-                    'date': created_date,
-                    'time': created_date.strftime('%H:%M:%S'),
-                    'points': -5,
-                    'reason': 'You deleted a post'
-            })
+            if vote_count > 0:
+                # If votes exist, return an error message
+                return jsonify({"error": "Suggestion cannot be deleted because it has been voted on."}), 400
 
-            # Delete votes associated with the suggestion first
-            #cursor.execute("""
-            #    DELETE FROM Vote
-            #    WHERE SuggestionID = %s
-            #""", (suggestion_id,))
-            #conn.commit()
 
             # Delete the suggestion itself
             cursor.execute("""
@@ -742,7 +792,13 @@ def del_suggestion():
             cursor.execute(
                 "UPDATE User SET Points = GREATEST(Points - 5, 0) WHERE UserID = %s", (user_id,)
             )
-        
+
+            # Rana : Saving action for Point History
+            cursor.execute("""
+                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, -5, "Deleted a suggestion", datetime.now()))
+            
             conn.commit()
 
             cursor.close()
@@ -752,10 +808,10 @@ def del_suggestion():
         else:
             return jsonify({"error": "Suggestion not found"}), 404
 
- 
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while trying to delete the suggestion."}), 500
+
 
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
@@ -869,17 +925,32 @@ def vote():
                 (user_id, suggestion_id, vote_value)
             )
             
-            # Zar : Updating 1 point for Voting                                       
+            # Zar: Updating 1 point for Voting                                       
             cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (user_id,))
 
+            # Rana: Saving action for Point History
+            cursor.execute("""
+                INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, 1, "Voted on a suggestion",  datetime.now()))
 
+            # Get the user who owns the suggestion
             cursor.execute("SELECT UserID FROM Suggestion WHERE SuggestionID = %s", (suggestion_id,))
             suggestion_user = cursor.fetchone()
-            receiving_userid = suggestion_user['UserID']
-            
-            # Zar : Updating 1 point for Receiving Vote 
-            cursor.execute("UPDATE User SET Points = Points + 1  WHERE UserID = %s", (receiving_userid,))
 
+            if suggestion_user:
+                receiving_userid = suggestion_user['UserID']
+
+                # Zar: Updating 1 point for Receiving Vote 
+                cursor.execute("UPDATE User SET Points = Points + 1 WHERE UserID = %s", (receiving_userid,))
+
+                # Rana: Saving action for Point History
+                cursor.execute("""
+                    INSERT INTO PointsHistory (UserID, Points, Action, ActionDate) 
+                    VALUES (%s, %s, %s, %s)
+                """, (receiving_userid, 1, "Received a vote", datetime.now()))
+
+        conn.commit()
         # Update the Suggestion table with new vote counts
         update_suggestion_query = """
             UPDATE Suggestion

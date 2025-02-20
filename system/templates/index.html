@@ -1,5 +1,3 @@
-<!-- started by Rana -->
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -7,4 +5,24 @@
     <h1>Welcome to the Survey!</h1>
     <!-- <p>Swipe through questions and share your thoughts!</p> -->
 </div>
+
+{% if current_user.is_authenticated %}
+<br><br> 
+<div class="container">
+    <div id="emojiRecapPopup" class="popup">
+        <div class="popup-content">
+            <h3>Yesterday's Feedback Recap</h3>
+            <p>Total Users: <span id="totalUsers">{{ data.total_users }}</span></p>
+            <p>
+                😞 <span id="emoji1">{{ data.emoji_counts[1] }}</span> | 
+                🙁 <span id="emoji2">{{ data.emoji_counts[2] }}</span> | 
+                😐 <span id="emoji3">{{ data.emoji_counts[3] }}</span> | 
+                🙂 <span id="emoji4">{{ data.emoji_counts[4] }}</span> | 
+                😁 <span id="emoji5">{{ data.emoji_counts[5] }}</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
