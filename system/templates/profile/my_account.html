@@ -1,0 +1,68 @@
+{% extends 'profile/profile_base.html' %}
+
+{% block main_content %}
+
+<head>
+    <title>My Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>My Account</h1>
+
+        <!-- Display Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash {{ category }}">
+                        {{ message }}
+                    </div>                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Display Username -->
+        <div class="account-info">
+            <h3><strong>Username:</strong> {{ user.username }}</h3>
+        </div>
+
+        <!-- Change Password Form -->
+        <h2>Change Password</h2>
+        <form method="POST" action="{{ url_for('change_password') }}">
+            <div class="form-group">
+                <label for="current_password">Current Password:</label>
+                <input type="password" id="current_password" name="current_password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="new_password">New Password:</label>
+                <input type="password" id="new_password" name="new_password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>
+
+            <button type="submit" class="btn-green">Update Password</button>
+        </form>
+
+
+    </div>
+
+    <script>
+        // Fade out the flash messages after they appear
+        window.addEventListener('load', function() {
+            const flashMessages = document.querySelectorAll('.flash');
+            flashMessages.forEach(function(flashMessage) {
+                setTimeout(function() {
+                    flashMessage.style.opacity = 0;
+                }, 3000); // Fade out after 3 seconds
+            });
+        });
+    </script>
+    
+</body>
+
+{% endblock %}

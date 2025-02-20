@@ -1,6 +1,14 @@
 # Activating virtual enviornment: 'venv\Scripts\activate' - OS in terminal or 'source venv/bin/activate'
 
 # Install flask: 'pip install Flask' in terminal 
+
+# Install Turbo-flask: 'pip install turbo-flask' in terminal
+
 # Install flask_login: 'pip install flask_login' in terminal 
     # if it doesnt work, type '& ' and place your file path in quotes followed by '-m pip install flask_login'
+
+    # to find file path, run:
+    #    import sys
+    #    print(sys.executable)
+
 # Install MySQL Connector: 'pip install mysql-connector-python' in terminal

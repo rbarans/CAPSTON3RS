@@ -1,0 +1,40 @@
+<!-- started by Rana -->
+
+{% extends 'profile/profile_base.html' %}
+
+{% block main_content %}
+<head>
+    <title>My Points</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>My Points</h1>
+        <h3><strong>Total Points:</strong> {{ total_points }}</h3>
+
+        <h2>Points History</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Points</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in points_data %}
+                <tr>
+                    <td>{{ entry.ActionDate.strftime('%m/%d/%Y') }}</td>
+                    <td>{{ entry.ActionDate.strftime('%I:%M %p') }}</td>
+                    <td>{{ entry.Points }}</td>
+                    <td>{{ entry.Action }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+{% endblock %}
+

@@ -1,0 +1,72 @@
+{% extends 'profile/profile_base.html' %}
+
+{% block main_content %}
+<head>
+    <title>My Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile_style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>My Votes</h1>
+
+        <form method="GET">
+            <label for="vote_filter">Vote Filter: </label>
+            <select id="vote_filter" name="vote_filter" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="today" {% if request.args.get('vote_filter')=='today' %} selected {% endif %}>Voted Today</option>
+                <option value="last_week" {% if request.args.get('vote_filter')=='last_week' %} selected {% endif %}>Voted in the Last Week</option>
+                <option value="recent_to_oldest" {% if request.args.get('vote_filter')=='recent_to_oldest' %} selected {% endif %}>Newest to Oldest Vote</option>
+                <option value="oldest_to_recent" {% if request.args.get('vote_filter')=='oldest_to_recent' %} selected {% endif %}>Oldest to Newest Vote</option>
+                <option value="yes" {% if request.args.get('vote_filter')=='yes' %} selected {% endif %}>Voted 'Yes'</option>
+                <option value="no" {% if request.args.get('vote_filter')=='no' %} selected {% endif %}>Voted 'No'</option>
+                <option value="keyword" {% if request.args.get('vote_filter')=='keyword' %} selected {% endif %}>Containing Keywords</option>
+            </select>
+        
+            <input type="text" name="vote_keyword" placeholder="Enter keyword"
+                value="{{ request.args.get('vote_keyword', '') }}" 
+                {% if request.args.get('vote_filter') !='keyword' %} style="display:none;" {% endif %} />
+                <button class="btn-profile" type="submit" {% if request.args.get('vote_filter') !='keyword' %} style="display:none;" {% endif %}>Apply Filter</button>
+
+                <a href="{{ url_for('my_votes') }}" class="btn-profile">Reset Filter</a>               
+                
+        </form>
+
+        <div id="my-votes" class="card-container">
+            {% if votes_given %}
+                {% for vote in votes_given %}
+                    <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ vote.suggestionID }}" style="position: relative;">
+                        <div class="card-header">
+                            <p class="status-label status-{{ vote.StatusName | lower | replace(' ', '-') }}">
+                                Status: <span id="status-{{ vote.suggestionID }}">{{ vote.StatusName or "Unknown" }}</span>
+                            </p>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Title:</strong> {{ vote.description }}</p>
+                            <p><strong>Description:</strong> {{ vote.Comments }}</p>
+
+                            <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
+                            <span style="position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666;">
+                                {{ vote.CreatedDate.strftime('%m/%d/%Y') }}
+                                <br>
+                                {{ vote.CreatedDate.strftime('%I:%M %p') }}
+                            </span>
+                        </div>
+            
+                        <p style="margin-top: 40px; font-size: 14px; color: #333;">
+                            On <strong>{{ vote.VotedDate.strftime('%m/%d/%Y') }}</strong> at <strong>{{ vote.VotedDate.strftime('%I:%M %p') }}</strong> I voted:
+                            {% if vote.voteType == 1 %}
+                                <span style="color: green; font-weight: bold; font-style: italic;">YES</span>
+                            {% elif vote.voteType == 0 %}
+                                <span style="color: red; font-weight: bold; font-style: italic;">NO</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align: center; font-size: 18px; color: #333;">No suggestions found for this filter.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+{% endblock %}

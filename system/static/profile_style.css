@@ -1,0 +1,247 @@
+/* Rana : Profile Styles */
+
+.sidebar {
+    /*width: 200px;*/
+    background-color: #f4f4f4;
+    padding-top: 20px;
+    position: absolute;
+    height: 100%;
+    
+    /*Zar */
+    margin-left: 4%;
+    margin-top: 1%;
+    /* ----*/
+}
+
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 10px 0;
+}
+
+.sidebar ul li a {
+    text-decoration: none; 
+    color: #2980b9;
+    font-size: 16px;
+    display: block;
+    padding: 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar ul li a:hover {
+    background-color: #e692b7;
+    color: #fff;
+}
+
+.main-content {
+    margin-left: 220px; /* Adjust this value to the width of your sidebar */ 
+    padding: 20px;
+}
+
+
+#flash-container {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    width: auto;
+    max-width: 400px;
+}
+
+.flash {
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    opacity: 0;
+    animation: popUp 0.5s forwards;
+}
+
+.flash.success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.flash.error {
+    background-color: #f44336;
+    color: white;
+}
+
+@keyframes popUp {
+    0% {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.flash {
+    animation: popUp 0.5s forwards, fadeOut 3s forwards;
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+
+
+/* Zar: General styles */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f2f2f2;
+    text-align: center;
+    color: #050316;
+    font-size: 15px;
+}
+ 
+table {
+    width: 50%;
+    margin: auto;
+    border-collapse: collapse;
+}
+td {
+    padding: 10px; 
+}
+input { 
+    padding: 8px;
+}
+
+
+
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+h1 {
+    font-size: 2.5rem;
+    color: #e692b7;
+    padding-top: 10px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    float: left;
+}
+ 
+
+/* Change password  */
+form {
+    max-width: 500px;  /* Optional: limit the width of the form */
+    margin: 0 auto;    /* Center the form */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.btn-green {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-green :hover {
+    background-color: #45a049;
+}
+
+
+/* Profile button  */
+/* Apply same style to both button and link */
+.btn-profile {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #e692b7; /* Match your primary color */
+    color: white;
+    text-decoration: none;  /* Remove underline from links */
+    border-radius: 5px;
+    border: none;  /* Remove default border from button */
+    text-align: center;
+    font-size: 14px; /* Ensure same font size */
+    cursor: pointer;  /* Make sure both elements are clickable */
+}
+
+/* Hover effect for both button and link */
+.btn-profile:hover {
+    background-color: #d47c9e; /* Darker shade on hover */
+}
+
+/* Zar ========================= Responsive Design ========================= */
+
+@media (max-width: 1600px) {  
+    .container {
+        margin: 2rem auto;
+        padding: 20px;
+        max-width: 1000px;
+    }
+    
+    .card-container
+    {
+        margin-left: 10%;
+    }
+    .sidebar { 
+        background-color: #f4f4f4;
+        padding-top: 20px;
+        position: absolute;
+        height: 100%; 
+        margin-left: 2%;
+        margin-top: 1%; 
+    }
+    /* End of Zar */
+}
+/*
+@media (max-width: 768px) {
+    .main-content {
+        
+        margin-left: 2rem auto;  
+        padding: 20px;
+    }
+}
+    */
