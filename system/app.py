@@ -103,3 +103,33 @@ def rate_day(rating):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# Leaderboard route
+@app.route('/leaderboard')
+def leaderboard():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT Username, Score FROM User ORDER BY Score DESC LIMIT 5")
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('leaderboard.html', users=users)
+
+# JSON API route for Leaderboard
+@app.route('/leaderboard-data')
+def leaderboard_data():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT Username, Score FROM User ORDER BY Score DESC LIMIT 5")
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return {"users": users}
