@@ -997,9 +997,6 @@ def vote():
         'new_status': new_status
     })
 
-  
-if __name__ == '__main__':
-    app.run(debug=True)
 
 # Jayla: Leaderboard route
 @app.route('/leaderboard')
@@ -1016,6 +1013,7 @@ def leaderboard():
 
     return render_template('leaderboard.html', users=users)
 
+
 # Jayla: JSON API route for Leaderboard
 @app.route('/leaderboard-data')
 def leaderboard_data():
@@ -1030,3 +1028,7 @@ def leaderboard_data():
     conn.close()
 
     return {"users": users}
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
