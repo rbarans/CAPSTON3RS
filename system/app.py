@@ -33,20 +33,26 @@ def get_db_connection():
 
 # Define User class for Flask-Login
 class User(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, username, isadmin):     # Zar: added isadmin
         self.id = id
         self.username = username
+        self.isadmin = isadmin    # Zar: added isadmin
+
+    @property
+    def IsAdmin(self):
+        return self.isadmin
 
 # Flask-Login user loader
 @login_manager.user_loader
 def load_user(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Fetch results as dictionaries
-    cursor.execute("SELECT * FROM User WHERE UserID = %s", (user_id,))
+    cursor.execute("SELECT * FROM User WHERE UserID = %s AND IsActive = 1", (user_id,))  # Zar: added IsActive
     user = cursor.fetchone()
     cursor.close()
     conn.close()
-    return User(user['UserID'], user['Username']) if user else None
+    return User(user['UserID'], user['Username'], user['IsAdmin']) if user else None   # Zar: added isadmin
+
 
 # Rana: route to home page
 @app.route('/')
@@ -63,13 +69,13 @@ def login():
         
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM User WHERE Username = %s", (username,))
+        cursor.execute("SELECT * FROM User WHERE Username = %s AND IsActive = 1", (username,)) #Zar : added IsActive
         user = cursor.fetchone()
         cursor.close()
         conn.close()
         
         if user and user['Password'] == password:  # Compare password directly
-            login_user(User(user['UserID'], user['Username']))
+            login_user(User(user['UserID'], user['Username'], user['IsAdmin']))   # Zar: added isadmin
             return redirect(url_for('home'))
         elif user:  # User exists, but password is incorrect
             flash("Incorrect password.", "danger")
@@ -495,6 +501,99 @@ def change_password():
     return redirect(url_for('my_account'))
 
 
+# Zar: route to render the user management
+@app.route('/user_management', methods=['GET'])
+@login_required
+def user_management():
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT *, CASE  WHEN IsActive = 1 THEN 'Active' ELSE 'Deactivated' END AS Status FROM User ORDER BY IsActive DESC, UserName ASC")
+        users = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return render_template('user_management.html', users=users)
+    except Exception as e:
+        app.logger.error(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+     
+
+# Zar: route to update the user details
+@app.route('/update', methods=['POST'])
+def update_user():
+    data = request.get_json()
+    user_id = data.get('id')
+    username = data.get('username')
+    password = data.get('password')
+     
+    if not user_id or not username or not password:
+        return jsonify({"status": "error", "message": "Missing Data."}), 400
+
+    # update to database
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "UPDATE User SET username = %s , password = %s WHERE UserID = %s", (username,password,user_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": "User updated successfully!"}), 201
+    
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+    
+
+# Zar: route to deactivate the user
+@app.route('/deactivate', methods=['POST'])
+def deactivate_user():
+    data = request.get_json()
+    user_id = data.get('id')
+
+     # update to database
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('UPDATE User SET IsActive = 0 WHERE UserID = %s', (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": "User is deactivated successfully!"}), 201 
+    
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+
+
+# Zar: route to reactivate the user
+@app.route('/reactivate', methods=['POST'])
+def reactivate_user():
+    data = request.get_json()
+    user_id = data.get('id')
+
+     # update to database
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('UPDATE User SET IsActive = 1 WHERE UserID = %s', (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": "User is deactivated successfully!"}), 201 
+    
+    except Exception as e:
+        # Log the error
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500    
+ 
 
 # Zar: route to render the create account form
 @app.route('/createaccount', methods=['GET'])
@@ -586,30 +685,7 @@ def add_suggestion():
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-# Zar: function to update a suggestion
-def update_suggestion(suggestion_id, description=None, comments=None):
-    query = "UPDATE Suggestion SET "
-    updates = []
-    params = []
-    
-    if description is not None:
-        updates.append("Description = %s")
-        params.append(description)
-    if comments is not None:
-        updates.append("Comments = %s")
-        params.append(comments)
-
-    query += ", ".join(updates) + " WHERE SuggestionID = %s"
-    params.append(suggestion_id)
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    conn.commit()
-    cursor.close()
-    conn.close()
-
+ 
 
 # Zar: function to delete a suggestion
 # Rana: updated to show in points history
@@ -744,6 +820,7 @@ def voting_view():
 
 # Jacob: Route to handle voting
 # Rana: some changes to update Suggestion table as well
+# Zar: updating points for voting
 @app.route('/vote', methods=['POST'])
 @login_required
 def vote():
