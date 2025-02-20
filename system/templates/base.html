@@ -15,17 +15,20 @@
 
     <div class="navbar">
         <span class="title">Survey App</span>
-
-        <a href="/" class="nav-link">Home</a>
-        {% if current_user.is_authenticated %}
+        <div style="text-align: center;">
+            <a href="/" class="nav-link">Home</a>
+            {% if current_user.is_authenticated %}
             <a href="{{ url_for('add_suggestion') }}" class="nav-link">Post Suggestion</a>
             <a href="{{ url_for('voting_view') }}" class="nav-link">Voting View</a>
             <a href="{{ url_for('my_profile') }}" class="nav-link">My Profile</a>
+            {% if current_user.IsAdmin == 1 %}
+            <a href="{{ url_for('user_management') }}" class="nav-link">User Management</a>
+            {% endif %}
             <a href="{{ url_for('logout') }}" class="nav-link">Log Out</a>
-        {% else %}
+            {% else %}
             <a href="{{ url_for('login') }}" class="nav-link">Log In</a>
-        {% endif %}
-        
+            {% endif %}
+        </div>
     </div>
 
 

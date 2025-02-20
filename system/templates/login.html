@@ -20,7 +20,7 @@
 
 
     <form method="POST" action="{{ url_for('login') }}">
-        <table>
+        <table style="width: auto !important;">
             <tr>
                 <td><label for="username">Username:</label></td>
                 <td><input type="text" id="username" name="username" required></td>
@@ -36,7 +36,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center;">
-                    <a href="{{ url_for('createaccount') }}">Create Account</a>
+                    <a class="link" href="{{ url_for('createaccount') }}">Create Account</a>
                 </td>
             </tr>
         </table>
