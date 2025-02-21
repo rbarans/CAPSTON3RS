@@ -14,7 +14,7 @@
                 {% for user in users %}
                     <tr>
                         <td>{{ user.username }}</td>
-                        <td>{{ user.score }}</td>
+                        <td>{{ user.points }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -34,13 +34,13 @@
             data.forEach(user => {
                 const row = document.createElement("tr");
                 const username = document.createElement("td");
-                const score = document.createElement("td");
+                const points = document.createElement("td");
 
                 username.textContent = user.username;
-                score.textContent = user.score !== null ? user.score : "-";
+                points.textContent = user.points !== null ? user.points : "-";
 
                 row.appendChild(username);
-                row.appendChild(score);
+                row.appendChild(points);
 
                 leaderboardBody.appendChild(row);
             });
