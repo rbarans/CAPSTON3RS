@@ -60,6 +60,23 @@
         </div>
     </div>
 
+    <!-- Pagination Controls -->
+<div class="pagination">
+
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    <br><br>
+    {% if page > 1 %}
+        <a href="{{ url_for('voting_view', filter=filter_type, page=page-1) }}" class="page-btn">← Previous</a>
+    {% endif %}
+    
+    {% if page < total_pages %}
+        <a href="{{ url_for('voting_view', filter=filter_type, page=page+1) }}" class="page-btn">Next →</a>
+    {% endif %}
+    <br><br><br>
+
+</div>
+
+
     <!-- Vote Confirmation Message -->
     <div id="vote-confirmation" class="vote-confirmation hidden">Your vote has been recorded!</div>
 
