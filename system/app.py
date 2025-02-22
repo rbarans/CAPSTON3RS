@@ -4,6 +4,7 @@ from flask_login import LoginManager, login_user, logout_user, current_user, Use
 import datetime
 from datetime import datetime, timedelta
 from turbo_flask import Turbo
+import math 
 
 
 app = Flask(__name__)
@@ -843,10 +844,15 @@ def del_suggestion():
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
+from flask import request, render_template
+import math
+
 @app.route('/voting_view')
 @login_required
 def voting_view():
     filter_type = request.args.get('filter', 'newest')
+    page = request.args.get('page', 1, type=int)  # Get page number from query params
+    per_page = 15  # Suggestions per page
     user_id = current_user.id  # Get logged-in user's ID
 
     conn = get_db_connection()
@@ -893,12 +899,24 @@ def voting_view():
         query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), vs.NetVotes DESC"
 
     cursor.execute(query, (user_id,))
-    suggestions = cursor.fetchall()
+    all_suggestions = cursor.fetchall()
+
+    # Pagination logic
+    total_suggestions = len(all_suggestions)
+    total_pages = math.ceil(total_suggestions / per_page)
+    start = (page - 1) * per_page
+    end = start + per_page
+    suggestions = all_suggestions[start:end]
 
     cursor.close()
     conn.close()
 
-    return render_template("voting_view.html", suggestions=suggestions, filter_type=filter_type)
+    return render_template("voting_view.html", 
+                           suggestions=suggestions, 
+                           filter_type=filter_type, 
+                           page=page, 
+                           total_pages=total_pages)
+
 
 
 # Jacob: Route to handle voting

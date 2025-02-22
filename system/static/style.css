@@ -339,6 +339,21 @@ h2 {
     color: #333;
 }
 
+.page-btn {
+    background-color: #ff7575;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;  /* Remove underline from links */
+    border-radius: 5px;
+    border: none;  /* Remove default border from button */
+    text-align: center;
+    cursor: pointer;  /* Make sure both elements are clickable */
+}
+
+.page-btn:hover {
+    background-color: #2980b9;
+}
+
 /* ========================= Status Labels ========================= */
 
 .status-label {
