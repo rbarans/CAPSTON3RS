@@ -1050,7 +1050,7 @@ def leaderboard():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 5")
+    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 10")
     users = cursor.fetchall()
 
     cursor.close()
@@ -1066,13 +1066,13 @@ def leaderboard_data():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 5")
+    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 10")
     users = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return {"users": users}
+    return jsonify(users)
 
 
 if __name__ == '__main__':
