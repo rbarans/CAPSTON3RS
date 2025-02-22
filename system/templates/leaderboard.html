@@ -7,14 +7,14 @@
             <thead>
                 <tr>
                     <th>Username</th>
-                    <th>Score</th>
+                    <th>Points</th>
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
                 {% for user in users %}
                     <tr>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.points }}</td>
+                        <td>{{ user.Username }}</td>
+                        <td>{{ user.Points }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -36,11 +36,11 @@
                 const username = document.createElement("td");
                 const points = document.createElement("td");
 
-                username.textContent = user.username;
-                points.textContent = user.points !== null ? user.points : "-";
+                username.textContent = user.Username;
+                points.textContent = user.Points !== null ? user.Points : "-";
 
-                row.appendChild(username);
-                row.appendChild(points);
+                row.appendChild(Username);
+                row.appendChild(Points);
 
                 leaderboardBody.appendChild(row);
             });
