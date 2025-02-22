@@ -1050,13 +1050,12 @@ def leaderboard():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 10")
+    cursor.execute("SELECT UserID, Username, Points FROM User ORDER BY Points DESC LIMIT 10")
     users = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    print(users)
     return render_template('leaderboard.html', users=users)
 
 
@@ -1067,7 +1066,7 @@ def leaderboard_data():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT Username, Points FROM User ORDER BY Points DESC LIMIT 10")
+    cursor.execute("SELECT UserID, Username, Points FROM User ORDER BY Points DESC LIMIT 10")
     users = cursor.fetchall()
 
     cursor.close()
