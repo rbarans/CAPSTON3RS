@@ -15,6 +15,26 @@
         
         <h3> Hello, {{username}}</h3>
 
+        <br><hr><br>
+
+        <table style="width: 20%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 5px;"><strong>Points:</strong></td>
+                <td style="padding: 5px;">{{ points }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px;"><strong>Emoji Ratings:</strong></td>
+                <td style="padding: 5px;">{{ emoji_count }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px;"><strong>Suggestions:</strong></td>
+                <td style="padding: 5px;">{{ suggestion_count }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px;"><strong>Votes:</strong></td>
+                <td style="padding: 5px;">{{ vote_count }}</td>
+            </tr>
+        </table>
     </div>
 </body>
 

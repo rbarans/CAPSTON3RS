@@ -64,7 +64,11 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <p style="text-align: center; font-size: 18px; color: #333;">No suggestions found for this filter.</p>
+                {% if total_votes == 0 %}
+                    <p >No votes have been submitted yet.</p>
+                {% else%}
+                    <p>No votes found for this filter.</p>
+                {% endif %}
             {% endif %}
         </div>
     </div>

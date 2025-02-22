@@ -14,26 +14,31 @@
         <h3><strong>Total Points:</strong> {{ total_points }}</h3>
 
         <h2>Points History</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Points</th>
-                    <th>Reason</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in points_data %}
-                <tr>
-                    <td>{{ entry.ActionDate.strftime('%m/%d/%Y') }}</td>
-                    <td>{{ entry.ActionDate.strftime('%I:%M %p') }}</td>
-                    <td>{{ entry.Points }}</td>
-                    <td>{{ entry.Action }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% if points_data %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Points</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    {% for entry in points_data %}
+                    <tbody>
+                        <tr>
+                            <td>{{ entry.ActionDate.strftime('%m/%d/%Y') }}</td>
+                            <td>{{ entry.ActionDate.strftime('%I:%M %p') }}</td>
+                            <td>{{ entry.Points }}</td>
+                            <td>{{ entry.Action }}</td>
+                        </tr>
+                    </tbody>
+                    {% endfor %}
+                </table>
+        {% else %}
+            <p>You do not have any points! <br><br>
+                Earn points by leaving suggestions, voting on other's suggestions, and rating your day!</p>
+        {% endif %}
     </div>
 </body>
 {% endblock %}

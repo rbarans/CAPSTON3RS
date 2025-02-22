@@ -4,6 +4,7 @@ from flask_login import LoginManager, login_user, logout_user, current_user, Use
 import datetime
 from datetime import datetime, timedelta
 from turbo_flask import Turbo
+import math 
 
 
 app = Flask(__name__)
@@ -295,18 +296,36 @@ def my_profile():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # Use dictionary=True to get column names
 
-    # Fetch the user's username
-    cursor.execute(
-        "SELECT Username FROM User WHERE userID = %s",
-        (user_id,))
-    username_data = cursor.fetchone()
-    cursor.fetchall()
+    # Fetch username and user statistics in a single query
+    query = """
+        SELECT 
+            u.Username,
+            u.Points,  
+            COUNT(DISTINCT e.FeedbackID) AS EmojiCount,
+            COUNT(DISTINCT v.VoteID) AS VoteCount,
+            COUNT(DISTINCT s.SuggestionID) AS SuggestionCount
+        FROM User u
+        LEFT JOIN EmojiFeedback e ON u.UserID = e.UserID
+        LEFT JOIN Vote v ON u.UserID = v.UserID
+        LEFT JOIN Suggestion s ON u.UserID = s.UserID
+        WHERE u.UserID = %s;
+    """
 
-    username = username_data['Username'] if username_data else None
+    cursor.execute(query, (user_id,))
+    user_data = cursor.fetchone()
 
     cursor.close()
     conn.close()
-    return render_template('profile/my_profile.html', username=username)
+
+    return render_template(
+        'profile/my_profile.html', 
+        username=user_data["Username"],
+        points=user_data["Points"],
+        emoji_count=user_data["EmojiCount"],
+        vote_count=user_data["VoteCount"],
+        suggestion_count=user_data["SuggestionCount"]
+    )
+
 
 
 # Rana: route to my ratings in profile
@@ -422,12 +441,17 @@ def my_suggestions():
     if not suggestion_filter:
         suggestion_query += " ORDER BY s.createdDate DESC"
     
+    cursor.execute("SELECT COUNT(*) FROM Suggestion WHERE userID = %s", (user_id,))
+    total_suggestions = cursor.fetchone()["COUNT(*)"]  # Get the total count of user's suggestions
+
     cursor.execute(suggestion_query, tuple(params))  # Execute the query after modifying the string and params
+    
     suggestions = cursor.fetchall()
+
 
     cursor.close()  # Close the cursor after use
     conn.close()  # Close the connection
-    return render_template('profile/my_suggestions.html', suggestions=suggestions, 
+    return render_template('profile/my_suggestions.html', suggestions=suggestions, total_suggestions=total_suggestions,
                            suggestion_filter=suggestion_filter, suggestion_keyword=suggestion_keyword)
 
 
@@ -481,6 +505,9 @@ def my_votes():
     if not vote_filter:
         vote_query += " ORDER BY v.VotedDate DESC"
 
+    cursor.execute("SELECT COUNT(*) FROM Vote WHERE userID = %s", (user_id,))
+    total_votes = cursor.fetchone()["COUNT(*)"]  # Get the total count of user's suggestions
+
     # Execute vote query
     cursor.execute(vote_query, tuple(vote_params))  # Pass parameters as a tuple
     votes_given = cursor.fetchall()
@@ -488,7 +515,8 @@ def my_votes():
     cursor.close()  # Close the cursor after use
     conn.close()  # Close the connection
 
-    return render_template('profile/my_votes.html', vote_filter=vote_filter, vote_keyword=vote_keyword, votes_given=votes_given)
+    return render_template('profile/my_votes.html', vote_filter=vote_filter, total_votes=total_votes,
+                           vote_keyword=vote_keyword, votes_given=votes_given)
 
 
 # Rana: route to my account in profile
@@ -816,10 +844,15 @@ def del_suggestion():
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
+from flask import request, render_template
+import math
+
 @app.route('/voting_view')
 @login_required
 def voting_view():
     filter_type = request.args.get('filter', 'newest')
+    page = request.args.get('page', 1, type=int)  # Get page number from query params
+    per_page = 15  # Suggestions per page
     user_id = current_user.id  # Get logged-in user's ID
 
     conn = get_db_connection()
@@ -866,12 +899,24 @@ def voting_view():
         query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), vs.NetVotes DESC"
 
     cursor.execute(query, (user_id,))
-    suggestions = cursor.fetchall()
+    all_suggestions = cursor.fetchall()
+
+    # Pagination logic
+    total_suggestions = len(all_suggestions)
+    total_pages = math.ceil(total_suggestions / per_page)
+    start = (page - 1) * per_page
+    end = start + per_page
+    suggestions = all_suggestions[start:end]
 
     cursor.close()
     conn.close()
 
-    return render_template("voting_view.html", suggestions=suggestions, filter_type=filter_type)
+    return render_template("voting_view.html", 
+                           suggestions=suggestions, 
+                           filter_type=filter_type, 
+                           page=page, 
+                           total_pages=total_pages)
+
 
 
 # Jacob: Route to handle voting
