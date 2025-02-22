@@ -1056,6 +1056,7 @@ def leaderboard():
     cursor.close()
     conn.close()
 
+    print(users)
     return render_template('leaderboard.html', users=users)
 
 
