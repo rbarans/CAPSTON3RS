@@ -955,7 +955,7 @@ def voting_view():
     elif filter_type == 'status':
         query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), NetVotes DESC"
 
-    cursor.execute(query, (user_id,))
+    cursor.execute(query, (user_id, user_id))
     all_suggestions = cursor.fetchall()
 
     # Pagination logic
