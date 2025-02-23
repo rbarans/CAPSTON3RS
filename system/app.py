@@ -93,11 +93,6 @@ def home():
 
 
 
-
-
-
-
-
 # Rana: Function to check if user is locked out
 def is_user_locked(user_id):
     conn = get_db_connection()
@@ -586,15 +581,35 @@ def change_password():
 @app.route('/user_management', methods=['GET'])
 @login_required
 def user_management():
-    
     try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of suggestions per page
+        offset = (page - 1) * per_page  # Calculate offset
+
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT *, CASE  WHEN IsActive = 1 THEN 'Active' ELSE 'Deactivated' END AS Status FROM User ORDER BY IsActive DESC, UserName ASC")
+
+        # Get total number of suggestions
+        cursor.execute("SELECT COUNT(*) AS total FROM User")
+        total_users = cursor.fetchone()['total']
+        total_pages = (total_users + per_page - 1) // per_page  # Calculate total pages
+
+        # Fetch suggestions with pagination
+        query = """
+                SELECT *, CASE  WHEN IsActive = 1 THEN 'Active' 
+                                ELSE 'Deactivated' 
+                          END AS Status 
+                FROM User 
+                ORDER BY IsActive DESC, UserName ASC
+                LIMIT %s OFFSET %s
+                """
+        cursor.execute(query, (per_page, offset))
         users = cursor.fetchall()
+
         cursor.close()
         conn.close()
-        return render_template('user_management.html', users=users)
+
+        return render_template('user_management.html', users=users, page=page, total_pages=total_pages)
     except Exception as e:
         app.logger.error(f"Error: {e}")
         return jsonify({"error": "An error occurred. Please try again later."}), 500
@@ -771,12 +786,11 @@ def add_suggestion():
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
- 
 
 # Zar: function to delete a suggestion
 @app.route('/delete_suggestion', methods=['POST'])
-def del_suggestion():
-    user_id = current_user.id
+def del_suggestion(user_id=None):
+    #user_id = current_user.id
     suggestion_id = request.form.get('SuggestionID')
 
     if not suggestion_id:
@@ -796,6 +810,7 @@ def del_suggestion():
         suggestion = cursor.fetchone()
 
         if suggestion:
+            user_id = suggestion["UserID"]
 
             # Check if there are any votes associated with the suggestion
             cursor.execute("""
@@ -840,6 +855,49 @@ def del_suggestion():
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while trying to delete the suggestion."}), 500
 
+
+# Zar: route to render the user management
+@app.route('/managesuggestion', methods=['GET'])
+@login_required
+def managesuggestion():
+    
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of suggestions per page
+        offset = (page - 1) * per_page  # Calculate offset
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get total number of suggestions
+        cursor.execute("SELECT COUNT(*) AS total FROM Suggestion")
+        total_suggestions = cursor.fetchone()['total']
+        total_pages = (total_suggestions + per_page - 1) // per_page  # Calculate total pages
+
+        # Fetch suggestions with pagination
+        query = """
+                SELECT Sug.*, Usr.Username, Usr.IsActive 
+                FROM Suggestion as Sug
+                INNER JOIN User as Usr ON Sug.UserID = Usr.UserID
+                ORDER BY Sug.CreatedDate DESC
+                LIMIT %s OFFSET %s
+                """
+        cursor.execute(query, (per_page, offset))
+        suggestions = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return render_template('managesuggestion.html', suggestions=suggestions, page=page, total_pages=total_pages)
+    except Exception as e:
+        app.logger.error(f"Error: {e}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+     
+# Zar: function to delete a suggestion 
+@app.route('/del_suggestion_admin', methods=['POST'])
+@login_required
+def del_suggestion_admin():
+    return del_suggestion(user_id=current_user.id)
 
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter

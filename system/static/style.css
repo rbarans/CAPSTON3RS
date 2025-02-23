@@ -41,6 +41,16 @@ button:hover {
     background-color: #2980b9;
 }
 
+.pagination-button
+{
+    background-color: #ff7575;
+    color: white; 
+    padding: 5px 10px; 
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+ 
 .action-button {
     background: none;
     border: none;

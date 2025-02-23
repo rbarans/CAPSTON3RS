@@ -26,8 +26,8 @@
 <body>
 
     <div class="container">
-        <h1>User Management</h1>
         <a style="float: right;" class="action-button" href="{{ url_for('createaccount') }}">Create Account</a>
+        <h1>User Management</h1>        
         <table class="suggestion-table">
             <tr>
                 <th>User Name</th>
@@ -37,12 +37,12 @@
             </tr>
             {% for user in users %}
             <tr>
-                <td>{{ user.Username }}</td>
-                <td>{{ user.Points }}</td>
+                <td style="text-align: center;">{{ user.Username }}</td>
+                <td style="text-align: center;">{{ user.Points }}</td>
                 {% if user.Status == "Active" %}
-                    <td style="color:green;">{{ user.Status }}</td>
+                    <td style="color:green;text-align: center;">{{ user.Status }}</td>
                 {% else %}
-                    <td style="color:red;">{{ user.Status }}</td>
+                    <td style="color:red;text-align: center;">{{ user.Status }}</td>
                 {% endif %}
                 <td>
                     <button onclick="editUser('{{ user.UserID }}', '{{ user.Username }}', '{{ user.Password }}')">Edit</button>
@@ -56,6 +56,19 @@
             </tr>
             {% endfor %}
         </table>
+         <!-- Pagination Controls -->
+   
+         <div style="padding-top: 20px;">
+            <span>Page {{ page }} of {{ total_pages }}</span>
+            <div style="padding-top: 10px;">
+            {% if page > 1 %}
+            <a href="{{ url_for('user_management', page=page-1) }}" class="pagination-button">← Previous</a>
+            {% endif %}
+            {% if page < total_pages %}
+                <a href="{{ url_for('user_management', page=page+1) }}" class="pagination-button">Next →</a>
+            {% endif %}
+            </div>
+        </div>
 
 
 
