@@ -100,9 +100,7 @@
             <label for="modalComment">Your Comment (optional):</label>
             <textarea id="modalComment" placeholder="Enter your comment here..."></textarea>
 
-            <!-- New "+ Add Comment" Button -->
-            <button id="addCommentBtn" class="hidden" onclick="submitComment()">+ Add Comment</button>
-
+            
             <!-- Voting in Lightbox -->
             <div class="modal-vote-buttons">
                 <button class="upvote" onclick="castVoteFromModal('upvote')">👍 
@@ -156,7 +154,7 @@
             if (suggestions.length > 0) {
                 let currentSuggestion = suggestions[currentIndex];
                 document.getElementById("modalTitle").innerText = currentSuggestion.Description;
-                document.getElementById("modalDescription").innerText = (currentSuggestion.Comments || "None");
+                document.getElementById("modalDescription").innerText = (currentSuggestion.SuggestionComments || "None");
                 document.getElementById("modalStatus").innerText = currentSuggestion.StatusName || "Unknown";
                 document.getElementById("modalUpvoteCount").innerText = currentSuggestion.PositiveVote || 0;
                 document.getElementById("modalDownvoteCount").innerText = currentSuggestion.NegativeVote || 0;
@@ -197,13 +195,6 @@
                     commentsList.innerHTML = "<li>No comments yet.</li>";
                 }
             }
-            // Toggle visibility of "+ Add Comment" button
-            function toggleAddCommentButton() {
-                let addCommentBtn = document.getElementById("addCommentBtn");
-            addCommentBtn.classList.toggle("hidden", !document.getElementById("modalComment").value.trim());
-            }
-            // Add event listener to comment box for button toggle
-            document.getElementById("modalComment").addEventListener("input", toggleAddCommentButton);
 
             // Submit a new comment
             function submitComment() {
@@ -221,7 +212,7 @@
                     body: new URLSearchParams({
                         'suggestion_id': suggestionId,
                         'vote_type': suggestions[currentIndex].UserVote === 1 ? 'upvote' : 'downvote',
-                        'comment': comment
+                        'comment': comment ? comment : suggestions[currentIndex].UserComment
                     })
                 })
                 .then(response => response.json())
@@ -249,7 +240,6 @@
 
                     // Clear comment input and hide button
                     document.getElementById("modalComment").value = "";
-                    toggleAddCommentButton();
                 })
                 .catch(error => console.error('Error:', error));
             }
@@ -271,29 +261,41 @@
 
             // Function to vote
             function castVote(suggestionId, voteType) {
-            let comment = document.getElementById("modalComment").value.trim();
+                let commentBox = document.getElementById("modalComment");
+                let comment = commentBox ? commentBox.value.trim() : "";
+
+                // Ensure we keep the existing comment if the user hasn't entered a new one
+                if (!comment && suggestions[currentIndex].UserComment) {
+                    comment = suggestions[currentIndex].UserComment;
+                }
+
+            let requestBody = new URLSearchParams({
+                'suggestion_id': suggestionId,
+                'vote_type': voteType
+            });
+
+            // Only include the comment if the user has entered one
+            if (comment) {
+                requestBody.append('comment', comment);
+            }
 
             fetch('/vote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                    'suggestion_id': suggestionId,
-                    'vote_type': voteType,
-                    'comment': comment
-                })
+                body: requestBody
             })
             .then(response => response.json())
             .then(data => {
-
+                console.log("Vote API Response:", data); // Debugging line
                 if (data.error) {
                     alert("Error: " + data.error);
                     return;
                 }
                 
                 // Update UI instantly
-                document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
-                document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
-                document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+                // document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                // document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                // document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
 
                 // Get buttons in both card and modal
                 const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
@@ -316,15 +318,34 @@
                     modalDownvote.classList.add("votedno", "voted");
                 }
 
+                // Update the comments list to reflect the latest comments
+                let commentsList = document.getElementById("modalCommentsList");
+                commentsList.innerHTML = ""; // Clear previous comments
+
+                if (data.updated_comments.length > 0) {
+                    data.updated_comments.forEach(commentObj => {
+                        let commentItem = document.createElement("li");
+                        commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
+                        commentsList.appendChild(commentItem);
+                    });
+                } else {
+                    commentsList.innerHTML = "<li>No comments yet.</li>";
+                }
+
+                // If the user entered a comment, clear the input field
+                if (comment) {
+                    document.getElementById("modalComment").value = "";
+                }
+
                 // Show confirmation message
                 let confirmation = document.getElementById("vote-confirmation");
                 confirmation.classList.remove("hidden");
 
 
-                // Reload after 100 ms
+                // Reload after 300 ms
                 setTimeout(() => {
                     location.reload();
-                }, 100);
+                }, 300);
             })
             .catch(error => console.error('Error:', error));
         }
@@ -346,10 +367,7 @@
                     localStorage.removeItem("voteSuccess"); // Clear flag
                 }, 1500);
             }
-            if (savedIndex !== null) {
-                openModal(parseInt(savedIndex));
-                localStorage.removeItem("openModalIndex"); // Clear flag
-            }
+            
             document.querySelectorAll(".suggestion-card").forEach((card) => {
                 let suggestionId = card.dataset.id;
                 let suggestion = suggestions.find(s => s.SuggestionID == suggestionId);
@@ -362,26 +380,6 @@
                     }
                 }
             });
-    
-
-            if (savedIndex !== null) {
-                let suggestionId = suggestions[parseInt(savedIndex)].SuggestionID;
-                let votedType = localStorage.getItem(`voted-${suggestionId}`);
-
-                const modalUpvote = document.querySelector(".modal-vote-buttons .upvote");
-                const modalDownvote = document.querySelector(".modal-vote-buttons .downvote");
-
-                // Reset any previous highlighting
-                modalUpvote.classList.remove("votedyes", "voted");
-                modalDownvote.classList.remove("votedno", "voted");
-
-                // Apply the correct highlight
-                if (votedType === 'upvote') {
-                    modalUpvote.classList.add("votedyes", "voted");
-                } else if (votedType === 'downvote') {
-                    modalDownvote.classList.add("votedno", "voted");
-                }
-            }
         });
     </script>
 </body>
