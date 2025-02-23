@@ -90,6 +90,18 @@
             <p><strong>Status:</strong> <span id="modalStatus"></span></p>
             <p><strong>Created Date:</strong><span id="modalDate"></span></p>
 
+            <!-- Existing Comments Section -->
+            <div id="modalCommentsSection">
+                <h4>Comments:</h4>
+                <ul id="modalCommentsList"></ul>
+            </div>
+
+            <!-- Comment Input Box -->
+            <label for="modalComment">Your Comment (optional):</label>
+            <textarea id="modalComment" placeholder="Enter your comment here..."></textarea>
+
+            <!-- New "+ Add Comment" Button -->
+            <button id="addCommentBtn" class="hidden" onclick="submitComment()">+ Add Comment</button>
 
             <!-- Voting in Lightbox -->
             <div class="modal-vote-buttons">
@@ -157,8 +169,13 @@
                 modalUpvote.classList.remove("votedyes", "voted");
                 modalDownvote.classList.remove("votedno", "voted");
 
-                // Retrieve user's previous vote from local storage
-                let votedType = localStorage.getItem(`voted-${currentSuggestion.SuggestionID}`);
+                // Retrieve user's previous vote
+                let votedType = currentSuggestion.UserVote;
+                if (votedType === 1) {
+                    modalUpvote.classList.add("votedyes", "voted");
+                } else if (votedType === 0) {
+                    modalDownvote.classList.add("votedno", "voted");
+                }
 
                 // Apply highlighting to the modal buttons if a previous vote exists
                 if (votedType === 'upvote') {
@@ -166,6 +183,75 @@
                 } else if (votedType === 'downvote') {
                     modalDownvote.classList.add("votedno", "voted");
                 }
+                // Update Comments Section
+                let commentsList = document.getElementById("modalCommentsList");
+                commentsList.innerHTML = ""; // Clear previous comments
+
+                if (currentSuggestion.VoteComments && currentSuggestion.VoteComments.length > 0) {
+                    currentSuggestion.VoteComments.forEach(comment => {
+                        let commentItem = document.createElement("li");
+                        commentItem.innerHTML = `<strong>Anonymous:</strong> ${comment.Comment}`;
+                        commentsList.appendChild(commentItem);
+                    });
+                } else {
+                    commentsList.innerHTML = "<li>No comments yet.</li>";
+                }
+            }
+            // Toggle visibility of "+ Add Comment" button
+            function toggleAddCommentButton() {
+                let addCommentBtn = document.getElementById("addCommentBtn");
+            addCommentBtn.classList.toggle("hidden", !document.getElementById("modalComment").value.trim());
+            }
+            // Add event listener to comment box for button toggle
+            document.getElementById("modalComment").addEventListener("input", toggleAddCommentButton);
+
+            // Submit a new comment
+            function submitComment() {
+                let suggestionId = suggestions[currentIndex].SuggestionID;
+                let comment = document.getElementById("modalComment").value.trim();
+
+                if (!comment) {
+                    alert("Comment cannot be empty.");
+                    return;
+                }
+
+                fetch('/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        'suggestion_id': suggestionId,
+                        'vote_type': suggestions[currentIndex].UserVote === 1 ? 'upvote' : 'downvote',
+                        'comment': comment
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Error: " + data.error);
+                        return;
+                    }
+
+                    // Fetch the updated comments from response
+                    let updatedComments = data.updated_comments;
+
+                    // Update the JavaScript object storing suggestions
+                    suggestions[currentIndex].VoteComments = updatedComments;
+
+                    // Update UI to reflect new comments
+                    let commentsList = document.getElementById("modalCommentsList");
+                    commentsList.innerHTML = ""; // Clear old comments
+
+                    updatedComments.forEach(commentObj => {
+                        let commentItem = document.createElement("li");
+                        commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
+                        commentsList.appendChild(commentItem);
+                    });
+
+                    // Clear comment input and hide button
+                    document.getElementById("modalComment").value = "";
+                    toggleAddCommentButton();
+                })
+                .catch(error => console.error('Error:', error));
             }
         }
 
@@ -183,23 +269,27 @@
             }
         }
 
-        function castVote(suggestionId, voteType) {
+            // Function to vote
+            function castVote(suggestionId, voteType) {
+            let comment = document.getElementById("modalComment").value.trim();
+
             fetch('/vote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ 'suggestion_id': suggestionId, 'vote_type': voteType })
+                body: new URLSearchParams({
+                    'suggestion_id': suggestionId,
+                    'vote_type': voteType,
+                    'comment': comment
+                })
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Vote response:", data); // Debugging
+
                 if (data.error) {
                     alert("Error: " + data.error);
                     return;
                 }
-
-                // Store vote selection
-                localStorage.setItem(`voted-${suggestionId}`, voteType);
-
+                
                 // Update UI instantly
                 document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
                 document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
@@ -230,10 +320,6 @@
                 let confirmation = document.getElementById("vote-confirmation");
                 confirmation.classList.remove("hidden");
 
-                console.log("Reloading page..."); // Debugging
-
-                localStorage.setItem("voteSuccess", "true");
-
 
                 // Reload after 100 ms
                 setTimeout(() => {
@@ -245,7 +331,6 @@
 
         function castVoteFromModal(voteType) {
             let suggestionId = suggestions[currentIndex].SuggestionID;
-            localStorage.setItem("openModalIndex", currentIndex);
             castVote(suggestionId, voteType);
         }
 
@@ -261,22 +346,24 @@
                     localStorage.removeItem("voteSuccess"); // Clear flag
                 }, 1500);
             }
-             // Reopen modal if it was open before reload
-            let savedIndex = localStorage.getItem("openModalIndex");
             if (savedIndex !== null) {
                 openModal(parseInt(savedIndex));
                 localStorage.removeItem("openModalIndex"); // Clear flag
             }
             document.querySelectorAll(".suggestion-card").forEach((card) => {
                 let suggestionId = card.dataset.id;
-                let votedType = localStorage.getItem(`voted-${suggestionId}`);
-
-                if (votedType === 'upvote') {
-                    document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes");
-                } else if (votedType === 'downvote') {
-                    document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno");
+                let suggestion = suggestions.find(s => s.SuggestionID == suggestionId);
+                
+                if (suggestion && suggestion.UserVote !== null) {
+                    if (suggestion.UserVote == 1) {
+                        document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes", "voted");
+                    } else if (suggestion.UserVote == 0) {
+                        document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno", "voted");
+                    }
                 }
             });
+    
+
             if (savedIndex !== null) {
                 let suggestionId = suggestions[parseInt(savedIndex)].SuggestionID;
                 let votedType = localStorage.getItem(`voted-${suggestionId}`);

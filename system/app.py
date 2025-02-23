@@ -916,45 +916,44 @@ def voting_view():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Calculate vote totals & determine status
     query = """
-        WITH VoteSummary AS (
-            SELECT 
-                s.SuggestionID,
-                s.Description,
-                s.Comments,
-                s.CreatedDate,
-                COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS PositiveVote,
-                COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS NegativeVote,
-                (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
-                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes,
-                (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) + 
-                 COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS TotalVotes
-            FROM Suggestion s
-            LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
-            GROUP BY s.SuggestionID
-        )
         SELECT 
-            vs.SuggestionID,
-            vs.Description,
-            vs.Comments,
-            vs.CreatedDate,
-            vs.PositiveVote,
-            vs.NegativeVote,
-            vs.NetVotes,
-            vs.TotalVotes,
-            (SELECT StatusName FROM Status st WHERE vs.NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) AS StatusName,
-            (SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = vs.SuggestionID LIMIT 1) AS UserVote
-        FROM VoteSummary vs
+            s.SuggestionID,
+            s.Description,
+            s.CreatedDate,
+            s.Comments AS SuggestionComments,  -- Renamed for clarity
+            COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS PositiveVote,
+            COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS NegativeVote,
+            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
+             COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes,
+            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) + 
+             COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS TotalVotes,
+
+            -- Get the status based on net votes
+            (SELECT StatusName FROM Status st WHERE NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) AS StatusName,
+
+            -- Retrieve the current user's vote type and comment (if they exist)
+            (SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = s.SuggestionID LIMIT 1) AS UserVote,
+            (SELECT Comment FROM Vote WHERE UserID = %s AND SuggestionID = s.SuggestionID LIMIT 1) AS UserComment,
+
+            -- Retrieve all vote comments along with usernames
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('UserName', u.Username, 'Comment', v.Comment))
+                FROM Vote v
+                JOIN User u ON v.UserID = u.UserID
+                WHERE v.SuggestionID = s.SuggestionID AND v.Comment IS NOT NULL) AS VoteComments
+
+        FROM Suggestion s
+        LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
+        GROUP BY s.SuggestionID, s.Description, s.CreatedDate, s.Comments
     """
 
     # Apply filters
     if filter_type == 'newest':
-        query += " ORDER BY vs.CreatedDate DESC"
+        query += " ORDER BY s.CreatedDate DESC"
     elif filter_type == 'trending':
-        query += " ORDER BY vs.TotalVotes DESC"
+        query += " ORDER BY TotalVotes DESC"
     elif filter_type == 'status':
-        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), vs.NetVotes DESC"
+        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), NetVotes DESC"
 
     cursor.execute(query, (user_id,))
     all_suggestions = cursor.fetchall()
@@ -965,6 +964,11 @@ def voting_view():
     start = (page - 1) * per_page
     end = start + per_page
     suggestions = all_suggestions[start:end]
+
+    # Convert JSON string to Python dictionary for VoteComments
+    for suggestion in suggestions:
+        if suggestion["VoteComments"]:
+            suggestion["VoteComments"] = eval(suggestion["VoteComments"])
 
     cursor.close()
     conn.close()
@@ -985,6 +989,8 @@ def voting_view():
 def vote():
     suggestion_id = request.form.get('suggestion_id')
     vote_type = request.form.get('vote_type')
+    comment = request.form.get('comment', '').strip()  # Get user's comment (if any)
+
 
     if not suggestion_id or vote_type not in ['upvote', 'downvote']:
         return jsonify({'error': 'Invalid request'}), 400
@@ -1002,30 +1008,20 @@ def vote():
         cursor.execute("SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = %s", (user_id, suggestion_id))
         existing_vote = cursor.fetchone()
 
+        previous_vote = existing_vote['VoteType'] if existing_vote else None
+        previous_comment = existing_vote.get('Comment', '') if existing_vote else ""
+        
         if existing_vote:
-            previous_vote = existing_vote['VoteType']
-            if previous_vote != vote_value:
-                # Remove previous vote count before updating
-                update_suggestion_query = """
-                    UPDATE Suggestion
-                    SET 
-                        PositiveVote = PositiveVote - IF(%s = 1, 1, 0),
-                        NegativeVote = NegativeVote - IF(%s = 0, 1, 0),
-                        NetVotes = NetVotes - IF(%s = 1, 1, -1)
-                    WHERE SuggestionID = %s
-                """
-                cursor.execute(update_suggestion_query, (previous_vote, previous_vote, previous_vote, suggestion_id))
-
-            # Update the vote
-            cursor.execute(
-                "UPDATE Vote SET VoteType = %s WHERE UserID = %s AND SuggestionID = %s",
-                (vote_value, user_id, suggestion_id)
-            )
+            if previous_vote != vote_value or (comment and comment != previous_comment):
+                cursor.execute(
+                    "UPDATE Vote SET VoteType = %s, Comment = %s WHERE UserID = %s AND SuggestionID = %s",
+                    (vote_value, comment, user_id, suggestion_id)
+                )
         else:
-            # Insert new vote
+            # Insert new vote with comment
             cursor.execute(
-                "INSERT INTO Vote (UserID, SuggestionID, VoteType) VALUES (%s, %s, %s)",
-                (user_id, suggestion_id, vote_value)
+                "INSERT INTO Vote (UserID, SuggestionID, VoteType, Comment) VALUES (%s, %s, %s, %s)",
+                (user_id, suggestion_id, vote_value, comment)
             )
             
             # Zar: Updating 1 point for Voting                                       
@@ -1072,6 +1068,15 @@ def vote():
         )
         vote_counts = cursor.fetchone()
 
+        # Fetch updated comments
+        cursor.execute("""
+            SELECT u.Username, v.Comment
+            FROM Vote v
+            JOIN User u ON v.UserID = u.UserID
+            WHERE v.SuggestionID = %s AND v.Comment IS NOT NULL
+        """, (suggestion_id,))
+        updated_comments = cursor.fetchall()
+
         # Fetch the updated status
         cursor.execute(
             """
@@ -1097,7 +1102,8 @@ def vote():
         'new_upvotes': vote_counts['PositiveVote'] or 0,
         'new_downvotes': vote_counts['NegativeVote'] or 0,
         'net_votes': vote_counts['NetVotes'] or 0,
-        'new_status': new_status
+        'new_status': new_status,
+        'updated_comments': updated_comments  # Send updated comments
     })
 
 
