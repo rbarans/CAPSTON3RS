@@ -6,7 +6,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Post Suggestion</title>
+    <title>Suggestion Management</title>
     <link rel="stylesheet" href="../static/style.css" />
 
     <!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
@@ -20,47 +20,27 @@
     </style>
 
 <body>
-    
+
     <div class="container">
-        {% if current_user.IsAdmin == 1 %}
-        <a style="float: right;" class="action-button" href="{{ url_for('managesuggestion') }}">Manage Suggestion</a>
-        {% endif %}
-        <h1>Post Suggestion</h1>       
-        <!-- Suggestion Form -->
-        <form id="suggestionForm" method="POST">
-            <table>
-                <tr>
-                    <td><label for="Description">Title:</label></td>
-                    <td><textarea type="text" rows="3" id="Description" name="Description" required></textarea></td>
-                </tr>
-                <tr>
-                    <td><label for="Comments">Description:</label></td>
-                    <td><textarea type="text" rows="3" id="Comments" name="Comments"></textarea></td>
-                </tr>
-
-                <tr>
-                    <td> </td>
-                    <td>
-                        <button id="btnSubmit" type="submit" class="btn-submit">Add</button>
-                        <button id="btnCancel" type="button" class="btn-submit">Cancel</button>
-                    </td>
-                </tr>
-            </table>
-        </form>
-
+        <h1>Suggestion Management</h1>
+       
         <!-- Suggestions Table -->
         <table class="suggestion-table">
             <tr>
                 <th>Suggestion</th>
-                <th>Comments</th>
+                <th>Created By</th>
                 <th>Created Date</th>
                 <th>Action</th>
             </tr>
             {% for suggestion in suggestions %}
             <tr>
                 <td>{{ suggestion.Description }}</td>
-                <td>{{ suggestion.Comments }}</td>
-                <td>
+                {% if suggestion.IsActive == 1 %}
+                    <td style="color:green;text-align: center;">{{ suggestion.Username }}</td>
+                {% else %}
+                    <td style="color:red;text-align: center;">{{ suggestion.Username }}</td>
+                {% endif %} 
+                <td style="text-align: center;">
                     {{suggestion.CreatedDate.strftime('%m/%d/%Y') }} - {{ suggestion.CreatedDate.strftime('%I:%M %p') }}
                 </td>
                 <td class="td-action">
@@ -72,37 +52,25 @@
             </tr>
             {% endfor %}
         </table>
+        <!-- Pagination Controls -->
+   
+        <div style="padding-top: 20px;">
+            <span>Page {{ page }} of {{ total_pages }}</span>
+            <div style="padding-top: 10px;">
+            {% if page > 1 %}
+            <a href="{{ url_for('managesuggestion', page=page-1) }}" class="pagination-button">← Previous</a>
+            {% endif %}
+            {% if page < total_pages %}
+                <a href="{{ url_for('managesuggestion', page=page+1) }}" class="pagination-button">Next →</a>
+            {% endif %}
+            </div>
+        </div>
     </div>
 
 
 
     <!--YOUR OWN JAVASCRIPT-->
     <script type="text/javascript">
-
-        document.getElementById("suggestionForm").addEventListener("submit", function (event) {
-            event.preventDefault(); // Prevent form from refreshing the page
-
-            let formData = new FormData(this);
-
-            fetch("/suggestion", {
-                method: "POST",
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-
-                    if (data.message) {
-                        Swal.fire(
-                            'Saved!',
-                            data.message || data.error,
-                            data.message ? 'success' : 'error'
-                        ).then(() => {
-                            location.reload(); // Reload the page to update the suggestions table
-                        });
-                    }
-                })
-                .catch(error => console.error("Error:", error));
-        });
 
         document.querySelectorAll(".deleteForm").forEach(form => {
             form.addEventListener("submit", function (event) {
@@ -120,7 +88,7 @@
                     if (result.isConfirmed) {
                         let formData = new FormData(this);
 
-                        fetch("/delete_suggestion", {
+                        fetch("/del_suggestion_admin", {
                             method: "POST",
                             body: formData
                         })
@@ -141,12 +109,7 @@
                 });
             });
         });
-
-
-
-        document.getElementById("btnCancel").addEventListener("click", function () {
-            document.getElementById("suggestionForm").reset();
-        });
+ 
     </script>
     <!--END OF YOUR OWN JAVASCRIPT-->
 </body>
