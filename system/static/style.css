@@ -360,7 +360,6 @@ h2 {
 
 /* Icons and Colors for Notification Types */
 .notification-hub p:before {
-    content: "📢";
     margin-right: 5px;
 }
 
@@ -376,19 +375,16 @@ h2 {
 
 /* Votes Received */
 .notification-hub li:nth-child(1):before {
-    content: "⭐";
     color: #f1c40f;
 }
 
 /* Status Updates */
 .notification-hub li:nth-child(2):before {
-    content: "🔄";
     color: #3498db;
 }
 
 /* New Comments */
 .notification-hub li:nth-child(3):before {
-    content: "💬";
     color: #2ecc71;
 }
 

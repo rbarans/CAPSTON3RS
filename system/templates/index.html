@@ -12,7 +12,9 @@
 
         <!-- Leaderboard Position Change -->
         {% if leaderboard_change %}
-            <p>{{ leaderboard_change }}</p>
+        <ul>
+            <li>{{ leaderboard_change }}</li>
+        </ul>
         {% endif %}
 
         <!-- Votes Received on Suggestions -->
@@ -20,7 +22,7 @@
             <p>⭐ Your suggestions received votes:</p>
             <ul>
                 {% for vote in votes_received %}
-                    <li><strong>{{ vote.Description }}</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!</li>
+                    <li><strong>⭐ "{{ vote.Description }}"</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!</li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -30,7 +32,7 @@
             <p>🔄 Your suggestions had status updates:</p>
             <ul>
                 {% for update in status_updates %}
-                    <li><strong>{{ update.Description }}</strong> is now <em>{{ update.StatusName }}</em></li>
+                    <li><strong>🔄 "{{ update.Description }}"</strong>status changed to<em>{{ update.StatusName }}</em></li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -40,7 +42,7 @@
             <p>💬 New comments on your suggestions:</p>
             <ul>
                 {% for comment in comments_received %}
-                    <li><strong>Anonymous</strong> commented on <strong>{{ comment.Description }}</strong>: "{{ comment.Comment }}"</li>
+                    <li><strong>💬 Anonymous</strong> commented on <strong>"{{ comment.Description }}"</strong>: "{{ comment.Comment }}"</li>
                 {% endfor %}
             </ul>
         {% endif %}

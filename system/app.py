@@ -109,7 +109,7 @@ def home():
             break
 
     # Get previous leaderboard rank from session
-    previous_rank = session.get("previous_rank")
+    previous_rank = session.get("previous_rank", current_rank)  # Default to current rank if None
 
     # Store current rank for next time
     session["previous_rank"] = current_rank
@@ -135,11 +135,20 @@ def home():
 
     # Fetch status updates for user's suggestions
     cursor.execute("""
-        SELECT s.Description, st.StatusName
+        WITH StatusChanges AS (
+        SELECT 
+            s.SuggestionID, 
+            s.Description, 
+            st.StatusName,
+            st.Threshold,
+            ROW_NUMBER() OVER (PARTITION BY s.SuggestionID ORDER BY st.Threshold DESC) AS rank
         FROM Suggestion s
         JOIN Status st ON s.NetVotes >= st.Threshold
         WHERE s.UserID = %s
-        ORDER BY st.Threshold DESC
+    )
+    SELECT Description, StatusName 
+    FROM StatusChanges 
+    WHERE rank = 1
     """, (user_id,))
     status_updates = cursor.fetchall()
 
@@ -159,7 +168,7 @@ def home():
     conn.close()
 
     return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts},
-                           eaderboard_change=leaderboard_change,
+                           leaderboard_change=leaderboard_change,
                            votes_received=votes_received,
                            status_updates=status_updates,
                            comments_received=comments_received)
