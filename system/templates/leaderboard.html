@@ -1,11 +1,89 @@
 {% extends 'base.html' %}
 {% block title %}Leaderboard{% endblock %}
 {% block content %}
+
+<style>
+    .container {
+        font-family: Arial;
+        text-align: center;
+    }
+
+    h1 {
+        color: #ea2c7c;
+        background: linear-gradient(90deg, #e1c7d2, #e692b7);
+        padding: 15px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+
+    table {
+        width: 60%;
+        margin: 20px auto;
+        border-collapse: collapse;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    th, td {
+        padding: 12px 15px;
+        text-align: center;
+        font-size: 18px;
+    }
+
+    thead {
+        background-color: #e692b7;
+        color: #fff;
+    }
+
+    tbody tr:nth-child(1) {
+        background: gold;
+        font-weight: bold;
+    }
+
+    tbody tr:nth-child(2) {
+        background: silver;
+        font-weight: bold;
+    }
+
+    tbody tr:nth-child(3) {
+        background: #cd7f32;
+        font-weight: bold;
+    }
+
+    tbody tr {
+        background-color: #f8f8f8;
+        transition: all 0.3s ease-in-out;
+    }
+
+    tbody tr:hover {
+        background-color: #f4f4f4;
+        transform: scale(1.02);
+    }
+
+    .arrow {
+        margin-left: 10px;
+        font-size: 18px;
+    }
+
+    .up {
+        color: green;
+    }
+
+    .down {
+        color: red;
+    }
+
+    .no-change {
+        color: gray;
+    }
+</style>
 <div class="container">
     <h1>Leaderboard</h1>
         <table>
             <thead>
                 <tr>
+                    <th>Rank</th>
                     <th>Username</th>
                     <th>Points</th>
                 </tr>
@@ -13,8 +91,9 @@
             <tbody id="leaderboard-body">
                 {% for user in users %}
                     <tr>
-                        <td>{{ user.Username }}</td>
-                        <td>{{ user.Points }}</td>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.points }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -24,25 +103,59 @@
     document.addEventListener("DOMContentLoaded", function() {
         const leaderboardBody = document.getElementById("leaderboard-body");
 
-        if (!leaderboardBody || leaderboardBody.children.length > 0) {
-            return;
+    fetch("/leaderboard-data")
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Cannot load leaderboard data");
         }
-
-        fetch("/leaderboard-data")
-        .then (response => response.json())
+        return response.json();
+    })
         .then(data => {
-            data.forEach(user => {
+            if (!data.users || data.users.length === 0) {
+                console.warn("No users found in leaderboard data");
+                return;
+            }
+
+            leaderboardBody.innerHTML = "";
+            let previousPoints = null;
+
+            data.users.forEach((user, index) => {
                 const row = document.createElement("tr");
+
+                const rank = document.createElement("td");
                 const username = document.createElement("td");
                 const points = document.createElement("td");
 
-                username.textContent = user.Username;
-                points.textContent = user.Points !== null ? user.Points : "-";
+                rank.textContent = `#${index + 1}`;
+                username.textContent = user.username;
+                points.textContent = user.points !== null ? user.points : "-";
 
-                row.appendChild(Username);
-                row.appendChild(Points);
+                let arrowClass = "no-change";
+                let arrow = "";
+
+                if (previousPoints !== null) {
+                    if (user.points > previousPoints) {
+                        arrowClass = "up";
+                        arrow = "↑";
+                    } else if (user.points < previousPoints) {
+                        arrowClass = "down";
+                        arrow = "↓";
+                    }
+                }
+
+                const arrowSpan = document.createElement("span");
+                arrowSpan.classList.add("arrow", arrowClass);
+                arrowSpan.textContent = arrow;
+
+                points.appendChild(arrowSpan);
+
+                row.appendChild(rank);
+                row.appendChild(username);
+                row.appendChild(points);
 
                 leaderboardBody.appendChild(row);
+
+                previousPoints = user.points;
             });
         })
         .catch(error => console.error("Cannot load leaderboard:", error));

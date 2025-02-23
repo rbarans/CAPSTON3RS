@@ -1103,6 +1103,7 @@ def vote():
 
 # Jayla: Leaderboard route
 @app.route('/leaderboard')
+@login_required
 def leaderboard():
 
     conn = get_db_connection()
@@ -1119,6 +1120,7 @@ def leaderboard():
 
 # Jayla: JSON API route for Leaderboard
 @app.route('/leaderboard-data')
+@login_required
 def leaderboard_data():
 
     conn = get_db_connection()
@@ -1127,10 +1129,12 @@ def leaderboard_data():
     cursor.execute("SELECT UserID, Username, Points FROM User ORDER BY Points DESC LIMIT 10")
     users = cursor.fetchall()
 
+    leaderboard_data = [{'username': user['Username'], 'points': user['Points']} for user in users]
+
     cursor.close()
     conn.close()
 
-    return jsonify(users)
+    return jsonify(users=leaderboard_data)
 
 
 if __name__ == '__main__':
