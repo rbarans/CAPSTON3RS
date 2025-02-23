@@ -2,15 +2,14 @@
 
 # import mysql.connector
 
-# def delete_all_data():
+# def reset_database():
 #     try:
 #         # Establish database connection
 #         conn = mysql.connector.connect(
-#             host='107.180.1.16',
-#             port= 3306,
-#             user='cis440springA2025team3',
-#             password='cis440springA2025team3',
-#             database='cis440springA2025team3'
+#             host="your_host",
+#             user="your_user",
+#             password="your_password",
+#             database="your_database"
 #         )
 #         cursor = conn.cursor()
 
@@ -29,14 +28,21 @@
 #         # Re-enable foreign key checks
 #         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
+#         # Insert new admin account
+#         cursor.execute("""
+#             INSERT INTO User (UserID, Username, Password, Points, IsAdmin, IsActive) 
+#             VALUES (1, 'admin', '123', 0, 1, 1)
+#         """)
+#         print("Admin account created/updated successfully.")
+
 #         # Commit changes and close connection
 #         conn.commit()
 #         cursor.close()
 #         conn.close()
-#         print("All tables cleared successfully.")
+#         print("Database reset complete.")
 
 #     except mysql.connector.Error as err:
 #         print(f"Error: {err}")
 
 # # Run the function
-# delete_all_data()
+# reset_database()
