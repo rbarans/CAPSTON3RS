@@ -5,7 +5,53 @@
     <h1>Welcome to the Survey!</h1>
     <!-- <p>Swipe through questions and share your thoughts!</p> -->
     {% if current_user.is_authenticated %}
-    <br><br> 
+    <br><br>
+    <!-- Notification Hub -->
+    <div class="notification-hub">
+        <h3>📢 Notifications</h3>
+
+        <!-- Leaderboard Position Change -->
+        {% if leaderboard_change %}
+            <p>{{ leaderboard_change }}</p>
+        {% endif %}
+
+        <!-- Votes Received on Suggestions -->
+        {% if votes_received %}
+            <p>⭐ Your suggestions received votes:</p>
+            <ul>
+                {% for vote in votes_received %}
+                    <li><strong>{{ vote.Description }}</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- Status Updates on Suggestions -->
+        {% if status_updates %}
+            <p>🔄 Your suggestions had status updates:</p>
+            <ul>
+                {% for update in status_updates %}
+                    <li><strong>{{ update.Description }}</strong> is now <em>{{ update.StatusName }}</em></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- Comments on Suggestions -->
+        {% if comments_received %}
+            <p>💬 New comments on your suggestions:</p>
+            <ul>
+                {% for comment in comments_received %}
+                    <li><strong>Anonymous</strong> commented on <strong>{{ comment.Description }}</strong>: "{{ comment.Comment }}"</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if not leaderboard_change and not votes_received and not status_updates and not comments_received %}
+            <p>No new notifications.</p>
+        {% endif %}
+    </div>
+
+    <br><br>
+ 
     <div>
         <div id="emojiRecapPopup" class="popup">
             <div class="popup-content">

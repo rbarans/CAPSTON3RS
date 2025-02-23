@@ -59,6 +59,7 @@ def load_user(user_id):
 
 # Rana: route to home page
 @app.route('/')
+@login_required
 def home():
 
     conn = get_db_connection()
@@ -85,11 +86,83 @@ def home():
     emoji_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}  # Default values
     for row in cursor.fetchall():
         emoji_counts[row['EmojiRating']] = row['count']
+    
+    # Jacob Notifications
+    if current_user.is_authenticated:
+        user_id = current_user.id  # Get current user's ID
+        username = current_user.username  # Get current user's username
+
+
+    # Fetch leaderboard rank
+    cursor.execute("""
+        SELECT Username, Points,
+               RANK() OVER (ORDER BY Points DESC) AS Rank
+        FROM User
+    """)
+    leaderboard = cursor.fetchall()
+
+    # Find user's rank
+    current_rank = None
+    for entry in leaderboard:
+        if entry["Username"] == current_user.username:
+            current_rank = entry["Rank"]
+            break
+
+    # Get previous leaderboard rank from session
+    previous_rank = session.get("previous_rank")
+
+    # Store current rank for next time
+    session["previous_rank"] = current_rank
+
+    leaderboard_change = None
+    if previous_rank:
+        if current_rank < previous_rank:
+            leaderboard_change = f"🎉 You moved up to Rank #{current_rank}!"
+        elif current_rank > previous_rank:
+            leaderboard_change = f"⬇️ You dropped to Rank #{current_rank}."
+        else:
+            leaderboard_change = f"📊 You remain at Rank #{current_rank}."
+
+    # Fetch votes received on user's suggestions
+    cursor.execute("""
+        SELECT s.Description, COUNT(v.VoteID) AS VoteCount
+        FROM Vote v
+        JOIN Suggestion s ON v.SuggestionID = s.SuggestionID
+        WHERE s.UserID = %s
+        GROUP BY s.Description
+    """, (user_id,))
+    votes_received = cursor.fetchall()
+
+    # Fetch status updates for user's suggestions
+    cursor.execute("""
+        SELECT s.Description, st.StatusName
+        FROM Suggestion s
+        JOIN Status st ON s.NetVotes >= st.Threshold
+        WHERE s.UserID = %s
+        ORDER BY st.Threshold DESC
+    """, (user_id,))
+    status_updates = cursor.fetchall()
+
+    # Fetch new comments on user's suggestions
+    cursor.execute("""
+        SELECT s.Description, u.Username, v.Comment
+        FROM Vote v
+        JOIN Suggestion s ON v.SuggestionID = s.SuggestionID
+        JOIN User u ON v.UserID = u.UserID
+        WHERE s.UserID = %s AND v.Comment IS NOT NULL
+        ORDER BY v.VotedDate DESC
+    """, (user_id,))
+    comments_received = cursor.fetchall()
+
 
     cursor.close()
     conn.close()
 
-    return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts})
+    return render_template('index.html', data={'total_users': total_users, 'emoji_counts': emoji_counts},
+                           eaderboard_change=leaderboard_change,
+                           votes_received=votes_received,
+                           status_updates=status_updates,
+                           comments_received=comments_received)
 
 
 
