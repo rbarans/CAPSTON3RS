@@ -1009,6 +1009,19 @@ def vote():
         existing_vote = cursor.fetchone()
 
         if existing_vote:
+            previous_vote = existing_vote['VoteType']
+            if previous_vote != vote_value:
+                # Remove previous vote count before updating
+                update_suggestion_query = """
+                    UPDATE Suggestion
+                    SET 
+                        PositiveVote = PositiveVote - IF(%s = 1, 1, 0),
+                        NegativeVote = NegativeVote - IF(%s = 0, 1, 0),
+                        NetVotes = NetVotes - IF(%s = 1, 1, -1)
+                    WHERE SuggestionID = %s
+                """
+                cursor.execute(update_suggestion_query, (previous_vote, previous_vote, previous_vote, suggestion_id))
+            
             previous_comment = existing_vote.get('Comment', '').strip()
             comment_to_store = new_comment if new_comment else previous_comment
 

@@ -337,6 +337,9 @@
                     document.getElementById("modalComment").value = "";
                 }
 
+                // Store the modal index before refresh
+                localStorage.setItem("openModalIndex", currentIndex);
+
                 // Show confirmation message
                 let confirmation = document.getElementById("vote-confirmation");
                 confirmation.classList.remove("hidden");
@@ -352,6 +355,7 @@
 
         function castVoteFromModal(voteType) {
             let suggestionId = suggestions[currentIndex].SuggestionID;
+            localStorage.setItem("openModalIndex", currentIndex);
             castVote(suggestionId, voteType);
         }
 
@@ -379,8 +383,18 @@
                         document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno", "voted");
                     }
                 }
+                });
             });
-        });
+                
+            document.addEventListener("DOMContentLoaded", function () {
+                // Check if we should reopen a modal
+                let savedIndex = localStorage.getItem("openModalIndex");
+
+                if (savedIndex !== null) {
+                    openModal(parseInt(savedIndex));
+                    localStorage.removeItem("openModalIndex"); // Clear it after reopening
+                }
+            });
     </script>
 </body>
 {% endblock %}
