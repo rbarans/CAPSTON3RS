@@ -13,7 +13,7 @@
         <!-- Leaderboard Position Change -->
         {% if leaderboard_change %}
         <ul>
-            <li>{{ leaderboard_change }}</li>
+            <li>{{ leaderboard_change }}<a href="{{ url_for('leaderboard') }}" class="nav-link">View Leaderboard</a></li>
         </ul>
         {% endif %}
 
@@ -22,7 +22,7 @@
             <p>⭐ Your suggestions received votes:</p>
             <ul>
                 {% for vote in votes_received %}
-                    <li><strong>⭐ "{{ vote.Description }}"</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!</li>
+                    <li><strong>⭐ "{{ vote.Description }}"</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!<a href="{{ url_for('voting_view') }}" class="nav-link">View Voting Page</a></li>
                 {% endfor %}
             </ul>
         {% endif %}

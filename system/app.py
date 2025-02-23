@@ -1104,8 +1104,8 @@ def vote():
                 """
                 cursor.execute(update_suggestion_query, (previous_vote, previous_vote, previous_vote, suggestion_id))
             
-            previous_comment = existing_vote.get('Comment', '').strip()
-            comment_to_store = new_comment if new_comment else previous_comment
+            previous_comment = existing_vote.get('Comment')
+            comment_to_store = new_comment if new_comment else (previous_comment if previous_comment else None) 
 
 
             if existing_vote['VoteType'] != vote_value or (new_comment and new_comment != previous_comment):
