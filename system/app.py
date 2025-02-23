@@ -989,7 +989,7 @@ def voting_view():
 def vote():
     suggestion_id = request.form.get('suggestion_id')
     vote_type = request.form.get('vote_type')
-    comment = request.form.get('comment', '').strip()  # Get user's comment (if any)
+    new_comment = request.form.get('comment', '').strip()  # Get new comment and strip whitespace
 
 
     if not suggestion_id or vote_type not in ['upvote', 'downvote']:
@@ -1008,20 +1008,21 @@ def vote():
         cursor.execute("SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = %s", (user_id, suggestion_id))
         existing_vote = cursor.fetchone()
 
-        previous_vote = existing_vote['VoteType'] if existing_vote else None
-        previous_comment = existing_vote.get('Comment', '') if existing_vote else ""
-        
         if existing_vote:
-            if previous_vote != vote_value or (comment and comment != previous_comment):
+            previous_comment = existing_vote.get('Comment', '').strip()
+            comment_to_store = new_comment if new_comment else previous_comment
+
+
+            if existing_vote['VoteType'] != vote_value or (new_comment and new_comment != previous_comment):
                 cursor.execute(
                     "UPDATE Vote SET VoteType = %s, Comment = %s WHERE UserID = %s AND SuggestionID = %s",
-                    (vote_value, comment, user_id, suggestion_id)
+                    (vote_value, comment_to_store, user_id, suggestion_id)
                 )
         else:
             # Insert new vote with comment
             cursor.execute(
                 "INSERT INTO Vote (UserID, SuggestionID, VoteType, Comment) VALUES (%s, %s, %s, %s)",
-                (user_id, suggestion_id, vote_value, comment)
+                (user_id, suggestion_id, vote_value, new_comment if new_comment else None)
             )
             
             # Zar: Updating 1 point for Voting                                       
@@ -1073,7 +1074,7 @@ def vote():
             SELECT u.Username, v.Comment
             FROM Vote v
             JOIN User u ON v.UserID = u.UserID
-            WHERE v.SuggestionID = %s AND v.Comment IS NOT NULL
+            WHERE v.SuggestionID = %s AND v.Comment IS NOT NULL and v.Comment <> ''
         """, (suggestion_id,))
         updated_comments = cursor.fetchall()
 

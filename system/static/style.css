@@ -458,6 +458,10 @@ h2 {
     text-align: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+#modalCommentsList {
+    list-style-type: none; /* Removes bullets */
+    padding-left: 0; /* Removes extra indentation */
+}
 
 /* Close Button */
 .modal-close {
