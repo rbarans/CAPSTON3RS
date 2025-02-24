@@ -167,6 +167,14 @@
     <script>
         let suggestions = JSON.parse(document.getElementById("suggestion-data").dataset.suggestions);
         let currentIndex = 0;
+        let confirmation = document.getElementById("vote-confirmation");
+
+
+        window.onload = function() {
+            localStorage.setItem("voteSuccess", "false"); // Set flag to false
+            document.getElementById("vote-confirmation").classList.add("hidden");
+        };
+
 
         // Apply filter selection
         function applyFilter() {
@@ -301,6 +309,20 @@
 
                         // Clear comment input and hide button
                         document.getElementById("modalComment").value = "";
+
+                        // Show confirmation message
+                        confirmation = document.getElementById("vote-confirmation");
+                        confirmation.classList.remove("hidden");
+                        confirmation.classList.add(" visible");
+
+
+                        // Keep message visible for 1.5 seconds, then hide it
+                        setTimeout(() => {
+                            confirmation.classList.add("hidden");
+                            confirmation.classList.remove("visible");
+                            localStorage.removeItem("voteSuccess"); // Clear flag
+                        }, 1500);
+                        
                     })
                     .catch(error => console.error('Error:', error));
             }
@@ -352,7 +374,16 @@
                         return;
                     }
 
-                    localStorage.setItem("voteSuccess", "true"); // Set flag to true
+                    // Show the confirmation message
+                    let confirmation = document.getElementById("vote-confirmation");
+                    confirmation.classList.remove("hidden");
+                    confirmation.classList.add("visible");
+
+                    // Hide it after 1.5 seconds
+                    setTimeout(() => {
+                        confirmation.classList.remove("visible");
+                        confirmation.classList.add("hidden");
+                    }, 1500);
 
                     // Get buttons in both card and modal
                     const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
@@ -398,14 +429,17 @@
                     localStorage.setItem("openModalIndex", currentIndex);
 
                     // Show confirmation message
-                    let confirmation = document.getElementById("vote-confirmation");
+                    confirmation = document.getElementById("vote-confirmation");
                     confirmation.classList.remove("hidden");
+                    confirmation.classList.add(" visible");
 
 
-                    // Reload after 300 ms
+                    // Keep message visible for 1.5 seconds, then hide it
                     setTimeout(() => {
-                        location.reload();
-                    }, 300);
+                        confirmation.classList.add("hidden");
+                        confirmation.classList.remove("visible");
+                        localStorage.removeItem("voteSuccess"); // Clear flag
+                    }, 1500);
                 })
                 .catch(error => console.error('Error:', error));
         }
@@ -419,13 +453,15 @@
         // Highlight user's previous vote
         document.addEventListener("DOMContentLoaded", function () {
             if (localStorage.getItem("voteSuccess") === "true") {
-                let confirmation = document.getElementById("vote-confirmation");
-                confirmation.classList.remove("vote-confirmation-hidden");
-                confirmation.classList.add("vote-confirmation-visible");
+                confirmation = document.getElementById("vote-confirmation");
+                confirmation.classList.remove("hidden");
+                confirmation.classList.add(" visible");
+
 
                 // Keep message visible for 1.5 seconds, then hide it
                 setTimeout(() => {
                     confirmation.classList.add("hidden");
+                    confirmation.classList.remove("visible");
                     localStorage.removeItem("voteSuccess"); // Clear flag
                 }, 1500);
             }
@@ -449,20 +485,22 @@
             let savedIndex = localStorage.getItem("openModalIndex");
 
             if (localStorage.getItem("voteSuccess") === "true" && savedIndex !== null) {
+                confirmation = document.getElementById("vote-confirmation");
+                confirmation.classList.remove("hidden");
+                confirmation.classList.add(" visible");
 
-                let confirmation = document.getElementById("vote-confirmation");
-                confirmation.classList.remove("vote-confirmation-hidden");
-                confirmation.classList.add("vote-confirmation-visible");
 
                 // Keep message visible for 1.5 seconds, then hide it
                 setTimeout(() => {
                     confirmation.classList.add("hidden");
+                    confirmation.classList.remove("visible");
                     localStorage.removeItem("voteSuccess"); // Clear flag
                 }, 1500);
                 openModal(parseInt(savedIndex));
                 localStorage.removeItem("openModalIndex"); // Clear it after reopening
             }
         });
+
     </script>
 </body>
 {% endblock %}

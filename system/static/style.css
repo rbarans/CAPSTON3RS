@@ -636,11 +636,10 @@ h2 {
 
 /* ========================= Vote Confirmation ========================= */
 
-.vote-confirmation-hidden {
-    display: none; /* Initially hidden */
-} 
-
-.vote-confirmation-visible {
+.hidden {
+    display: none;
+}
+.visible {
     display: block; /* Show when needed */
     position: fixed;
     top: 70px;  /* Zar: Fixed not to cover the menu link*/
@@ -655,6 +654,7 @@ h2 {
     opacity: 0.9;
     animation: fadeOut 2s ease-in-out forwards;
 }
+
 
 @keyframes fadeOut {
     0% { opacity: 1; }
