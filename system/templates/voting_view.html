@@ -1,36 +1,67 @@
 {% extends "base.html" %}
 
 {% block content %}
+
 <head>
     <title>Voting View</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="container">
         <h1>Vote on Company Suggestions!</h1>
 
         <!-- Filter Dropdown -->
         <div class="filter-container">
-            <label for="filter">Sort by:</label>
-            <select id="filter" onchange="applyFilter()">
-                <option value="newest" {% if filter_type == 'newest' %}selected{% endif %}>Newest</option>
-                <option value="trending" {% if filter_type == 'trending' %}selected{% endif %}>Trending</option>
-                <option value="status" {% if filter_type == 'status' %}selected{% endif %}>Status</option>
-            </select>
+            <table style="width: 70%;">
+                <tr>
+                    <td>
+                        <label for="filter">Sort by:</label>
+                    </td>
+                    <td>
+                        <select id="filter" onchange="applyFilter()">
+                            <option value="newest" {% if filter_type=='newest' %}selected{% endif %}>Newest</option>
+                            <option value="trending" {% if filter_type=='trending' %}selected{% endif %}>Trending
+                            </option>
+                            <option value="status" {% if filter_type=='status' %}selected{% endif %}>Status</option>
+                        </select>
+                    </td>
+
+                    <!-- Status Checkboxes -->
+                    <td>
+
+                        <label>Filter by Status:</label>
+                        {% for status in all_statuses %}
+                        <label>
+                            <input type="checkbox" name="status" value="{{ status.StatusName }}" {% if status.StatusName
+                                in selected_statuses %}checked{% endif %} onchange="applyStatusFilter()">
+                            {{ status.StatusName }}
+                        </label>
+                        {% endfor %}
+                    </td>
+                     
+                </tr>
+            </table>
+
         </div>
+
+
 
         <!-- Suggestions Card View -->
         <div class="card-container">
             {% for suggestion in suggestions %}
-            <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}" style="position: relative;">
+            <div class="suggestion-card" data-index="{{ loop.index0 }}" data-id="{{ suggestion.SuggestionID }}"
+                style="position: relative;">
                 <div class="card-header">
                     <p class="status-label status-{{ suggestion.StatusName | lower | replace(' ', '-') }}">
-                        Status: <span id="status-{{ suggestion.SuggestionID }}">{{ suggestion.StatusName or "Unknown" }}</span>
-                    </p></div>
+                        Status: <span id="status-{{ suggestion.SuggestionID }}">{{ suggestion.StatusName or "Unknown"
+                            }}</span>
+                    </p>
+                </div>
                 <div class="card-body">
                     <p><strong>Title:</strong> {{ suggestion.Description }}</p>
                     <a href="javascript:void(0);" class="view-details" data-index="{{ loop.index0 }}">
-                        <weak>Click to View Details</weak>
+                        <weak>View Details</weak>
                     </a>
 
                     <!-- Top Right: Date (Formatted as MM-DD-YYYY) -->
@@ -42,16 +73,17 @@
 
                     <!-- Voting Section -->
                     <div class="vote-buttons">
-                        <button class="upvote {% if suggestion.UserVote == 1 %}voted{% endif %}" 
-                            id="upvote-btn-{{ suggestion.SuggestionID }}" 
+                        <button class="upvote {% if suggestion.UserVote == 1 %}voted{% endif %}"
+                            id="upvote-btn-{{ suggestion.SuggestionID }}"
                             onclick="castVote('{{ suggestion.SuggestionID }}', 'upvote')">
                             👍 <span id="upvote-{{ suggestion.SuggestionID }}">{{ suggestion.PositiveVote or 0 }}</span>
                         </button>
-                        
-                        <button class="downvote {% if suggestion.UserVote == 0 %}voted{% endif %}" 
-                            id="downvote-btn-{{ suggestion.SuggestionID }}" 
+
+                        <button class="downvote {% if suggestion.UserVote == 0 %}voted{% endif %}"
+                            id="downvote-btn-{{ suggestion.SuggestionID }}"
                             onclick="castVote('{{ suggestion.SuggestionID }}', 'downvote')">
-                            👎 <span id="downvote-{{ suggestion.SuggestionID }}">{{ suggestion.NegativeVote or 0 }}</span>
+                            👎 <span id="downvote-{{ suggestion.SuggestionID }}">{{ suggestion.NegativeVote or 0
+                                }}</span>
                         </button>
                     </div>
                 </div>
@@ -61,20 +93,20 @@
     </div>
 
     <!-- Pagination Controls -->
-<div class="pagination">
+    <div class="pagination">
 
-    <span>Page {{ page }} of {{ total_pages }}</span>
-    <br><br>
-    {% if page > 1 %}
+        <span>Page {{ page }} of {{ total_pages }}</span>
+        <br><br>
+        {% if page > 1 %}
         <a href="{{ url_for('voting_view', filter=filter_type, page=page-1) }}" class="page-btn">← Previous</a>
-    {% endif %}
-    
-    {% if page < total_pages %}
-        <a href="{{ url_for('voting_view', filter=filter_type, page=page+1) }}" class="page-btn">Next →</a>
-    {% endif %}
-    <br><br><br>
+        {% endif %}
 
-</div>
+        {% if page < total_pages %} <a href="{{ url_for('voting_view', filter=filter_type, page=page+1) }}"
+            class="page-btn">Next →</a>
+            {% endif %}
+            <br><br><br>
+
+    </div>
 
 
     <!-- Vote Confirmation Message -->
@@ -85,28 +117,39 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">✖</button>
             <h2 id="modalTitle"></h2>
-            <p><strong>Description:</strong> <span id="modalDescription"></p>
-            <p id="modalComments"></p>
-            <p><strong>Status:</strong> <span id="modalStatus"></span></p>
-            <p><strong>Created Date:</strong><span id="modalDate"></span></p>
-
-            <!-- Existing Comments Section -->
-            <div id="modalCommentsSection">
-                <h4>Comments:</h4>
-                <ul id="modalCommentsList"></ul>
-            </div>
-
-            <!-- Comment Input Box -->
-            <label for="modalComment">Your Comment (optional):</label>
-            <textarea id="modalComment" placeholder="Enter your comment here..."></textarea>
-
+            <table style="text-align: left; width:auto;">   
+                <tr>
+                    <td style="width:200px"><strong>Description:</strong></td>
+                    <td><span id="modalDescription"></span></td>
+                </tr>
+                <tr>
+                    <td><strong>Status:</strong></td>
+                    <td><span id="modalStatus"></span></td>
+                </tr>
+                <tr>
+                    <td><strong>Created Date:</strong></td>
+                    <td><span id="modalDate"></span></td>
+                </tr>
+                <tr>
+                    <!-- Existing Comments Section -->
+                    <td><h4>Comments:</h4></td>
+                    <td><ul id="modalCommentsList"></ul></td>
+                </tr>
+                <tr>
+                     <!-- Comment Input Box -->
+                    <td><strong><label for="modalComment">Your Comment (optional):</label></strong></td>
+                    <td><textarea id="modalComment" placeholder="Enter your comment here..."></textarea></td>
+                </tr>
+            </table>
+  
             
+
             <!-- Voting in Lightbox -->
             <div class="modal-vote-buttons">
-                <button class="upvote" onclick="castVoteFromModal('upvote')">👍 
+                <button class="upvote" onclick="castVoteFromModal('upvote')">👍
                     <span id="modalUpvoteCount">0</span>
                 </button>
-                <button class="downvote" onclick="castVoteFromModal('downvote')">👎 
+                <button class="downvote" onclick="castVoteFromModal('downvote')">👎
                     <span id="modalDownvoteCount">0</span>
                 </button>
             </div>
@@ -129,6 +172,20 @@
         function applyFilter() {
             let selectedFilter = document.getElementById("filter").value;
             window.location.href = "/voting_view?filter=" + selectedFilter;
+        }
+
+        // Zar: Apply status filter
+        function applyStatusFilter() {
+            let selectedStatuses = Array.from(document.querySelectorAll('input[name="status"]:checked'))
+                .map(checkbox => checkbox.value);
+            let filter = document.getElementById("filter").value;
+            let url = new URL(window.location.href);
+            url.searchParams.set('filter', filter);
+            url.searchParams.delete('status');
+            selectedStatuses.forEach(status => {
+                url.searchParams.append('status', status);
+            });
+            window.location.href = url.toString();
         }
 
         // Attach click event to open modal
@@ -158,7 +215,7 @@
                 document.getElementById("modalStatus").innerText = currentSuggestion.StatusName || "Unknown";
                 document.getElementById("modalUpvoteCount").innerText = currentSuggestion.PositiveVote || 0;
                 document.getElementById("modalDownvoteCount").innerText = currentSuggestion.NegativeVote || 0;
-                document.getElementById("modalDate").innerText =" " + currentSuggestion.CreatedDate;
+                document.getElementById("modalDate").innerText = " " + currentSuggestion.CreatedDate;
                 // Get modal vote buttons
                 const modalUpvote = document.querySelector(".modal-vote-buttons .upvote");
                 const modalDownvote = document.querySelector(".modal-vote-buttons .downvote");
@@ -181,7 +238,7 @@
                 } else if (votedType === 'downvote') {
                     modalDownvote.classList.add("votedno", "voted");
                 }
-        
+
                 // Update Comments Section
                 let commentsList = document.getElementById("modalCommentsList");
                 commentsList.innerHTML = ""; // Clear previous comments
@@ -216,36 +273,36 @@
                         'comment': comment ? comment : suggestions[currentIndex].UserComment
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert("Error: " + data.error);
-                        return;
-                    }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert("Error: " + data.error);
+                            return;
+                        }
 
-                    // Assuming the API returns a success status
-                    localStorage.setItem("voteSuccess", "true"); // Set flag to true
+                        // Assuming the API returns a success status
+                        localStorage.setItem("voteSuccess", "true"); // Set flag to true
 
-                    // Fetch the updated comments from response
-                    let updatedComments = data.updated_comments;
+                        // Fetch the updated comments from response
+                        let updatedComments = data.updated_comments;
 
-                    // Update the JavaScript object storing suggestions
-                    suggestions[currentIndex].VoteComments = updatedComments;
+                        // Update the JavaScript object storing suggestions
+                        suggestions[currentIndex].VoteComments = updatedComments;
 
-                    // Update UI to reflect new comments
-                    let commentsList = document.getElementById("modalCommentsList");
-                    commentsList.innerHTML = ""; // Clear old comments
+                        // Update UI to reflect new comments
+                        let commentsList = document.getElementById("modalCommentsList");
+                        commentsList.innerHTML = ""; // Clear old comments
 
-                    updatedComments.forEach(commentObj => {
-                        let commentItem = document.createElement("li");
-                        commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
-                        commentsList.appendChild(commentItem);
-                    });
+                        updatedComments.forEach(commentObj => {
+                            let commentItem = document.createElement("li");
+                            commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
+                            commentsList.appendChild(commentItem);
+                        });
 
-                    // Clear comment input and hide button
-                    document.getElementById("modalComment").value = "";
-                })
-                .catch(error => console.error('Error:', error));
+                        // Clear comment input and hide button
+                        document.getElementById("modalComment").value = "";
+                    })
+                    .catch(error => console.error('Error:', error));
             }
         }
 
@@ -288,69 +345,69 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: requestBody
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert("Error: " + data.error);
-                    return;
-                }
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Error: " + data.error);
+                        return;
+                    }
 
-                localStorage.setItem("voteSuccess", "true"); // Set flag to true
-                
-                // Get buttons in both card and modal
-                const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
-                const downvoteButton = document.getElementById(`downvote-btn-${suggestionId}`);
-                const modalUpvote = document.querySelector(`.modal-vote-buttons .upvote`);
-                const modalDownvote = document.querySelector(`.modal-vote-buttons .downvote`);
+                    localStorage.setItem("voteSuccess", "true"); // Set flag to true
 
-                // Reset all vote buttons before applying a new vote
-                upvoteButton.classList.remove("votedyes", "voted");
-                downvoteButton.classList.remove("votedno", "voted");
-                modalUpvote.classList.remove("votedyes", "voted");
-                modalDownvote.classList.remove("votedno", "voted");
+                    // Get buttons in both card and modal
+                    const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
+                    const downvoteButton = document.getElementById(`downvote-btn-${suggestionId}`);
+                    const modalUpvote = document.querySelector(`.modal-vote-buttons .upvote`);
+                    const modalDownvote = document.querySelector(`.modal-vote-buttons .downvote`);
 
-                // Apply the new highlight to the selected vote
-                if (voteType === 'upvote') {
-                    upvoteButton.classList.add("votedyes", "voted");
-                    modalUpvote.classList.add("votedyes", "voted");
-                } else if (voteType === 'downvote') {
-                    downvoteButton.classList.add("votedno", "voted");
-                    modalDownvote.classList.add("votedno", "voted");
-                }
+                    // Reset all vote buttons before applying a new vote
+                    upvoteButton.classList.remove("votedyes", "voted");
+                    downvoteButton.classList.remove("votedno", "voted");
+                    modalUpvote.classList.remove("votedyes", "voted");
+                    modalDownvote.classList.remove("votedno", "voted");
 
-                // Update the comments list to reflect the latest comments
-                let commentsList = document.getElementById("modalCommentsList");
-                commentsList.innerHTML = ""; // Clear previous comments
+                    // Apply the new highlight to the selected vote
+                    if (voteType === 'upvote') {
+                        upvoteButton.classList.add("votedyes", "voted");
+                        modalUpvote.classList.add("votedyes", "voted");
+                    } else if (voteType === 'downvote') {
+                        downvoteButton.classList.add("votedno", "voted");
+                        modalDownvote.classList.add("votedno", "voted");
+                    }
 
-                if (data.updated_comments.length > 0) {
-                    data.updated_comments.forEach(commentObj => {
-                        let commentItem = document.createElement("li");
-                        commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
-                        commentsList.appendChild(commentItem);
-                    });
-                } else {
-                    commentsList.innerHTML = "<li>No comments yet.</li>";
-                }
+                    // Update the comments list to reflect the latest comments
+                    let commentsList = document.getElementById("modalCommentsList");
+                    commentsList.innerHTML = ""; // Clear previous comments
 
-                // If the user entered a comment, clear the input field
-                if (comment) {
-                    document.getElementById("modalComment").value = "";
-                }
+                    if (data.updated_comments.length > 0) {
+                        data.updated_comments.forEach(commentObj => {
+                            let commentItem = document.createElement("li");
+                            commentItem.innerHTML = `<strong>${commentObj.UserName}:</strong> ${commentObj.Comment}`;
+                            commentsList.appendChild(commentItem);
+                        });
+                    } else {
+                        commentsList.innerHTML = "<li>No comments yet.</li>";
+                    }
 
-                // Store the modal index before refresh
-                localStorage.setItem("openModalIndex", currentIndex);
+                    // If the user entered a comment, clear the input field
+                    if (comment) {
+                        document.getElementById("modalComment").value = "";
+                    }
 
-                // Show confirmation message
-                let confirmation = document.getElementById("vote-confirmation");
-                confirmation.classList.remove("hidden");
+                    // Store the modal index before refresh
+                    localStorage.setItem("openModalIndex", currentIndex);
+
+                    // Show confirmation message
+                    let confirmation = document.getElementById("vote-confirmation");
+                    confirmation.classList.remove("hidden");
 
 
-                // Reload after 300 ms
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
-            })
-            .catch(error => console.error('Error:', error));
+                    // Reload after 300 ms
+                    setTimeout(() => {
+                        location.reload();
+                    }, 300);
+                })
+                .catch(error => console.error('Error:', error));
         }
 
         function castVoteFromModal(voteType) {
@@ -372,11 +429,11 @@
                     localStorage.removeItem("voteSuccess"); // Clear flag
                 }, 1500);
             }
-            
+
             document.querySelectorAll(".suggestion-card").forEach((card) => {
                 let suggestionId = card.dataset.id;
                 let suggestion = suggestions.find(s => s.SuggestionID == suggestionId);
-                
+
                 if (suggestion && suggestion.UserVote !== null) {
                     if (suggestion.UserVote == 1) {
                         document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes", "voted");
@@ -384,9 +441,9 @@
                         document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno", "voted");
                     }
                 }
-                });
+            });
         });
-                
+
         document.addEventListener("DOMContentLoaded", function () {
             // Check if we should reopen a modal
             let savedIndex = localStorage.getItem("openModalIndex");

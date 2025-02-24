@@ -992,11 +992,16 @@ import math
 def voting_view():
     filter_type = request.args.get('filter', 'newest')
     page = request.args.get('page', 1, type=int)  # Get page number from query params
+    statuses = request.args.getlist('status')
     per_page = 15  # Suggestions per page
     user_id = current_user.id  # Get logged-in user's ID
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    # Zar: Fetch all statuses
+    cursor.execute("SELECT StatusName FROM Status")
+    all_statuses = cursor.fetchall()
 
     query = """
         SELECT 
@@ -1026,8 +1031,20 @@ def voting_view():
 
         FROM Suggestion s
         LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
-        GROUP BY s.SuggestionID, s.Description, s.CreatedDate, s.Comments
+        WHERE 1=1
     """
+    #Zar:
+    params = [user_id, user_id]
+
+    if statuses:
+        query += " AND (SELECT StatusName FROM Status st WHERE NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) IN (%s)" % ','.join(['%s'] * len(statuses))
+        params.extend(statuses)
+  
+
+    query += """ 
+            GROUP BY s.SuggestionID, s.Description, s.CreatedDate, s.Comments
+        """
+    #------- End 
 
     # Apply filters
     if filter_type == 'newest':
@@ -1037,7 +1054,8 @@ def voting_view():
     elif filter_type == 'status':
         query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), NetVotes DESC"
 
-    cursor.execute(query, (user_id, user_id))
+ 
+    cursor.execute(query, tuple(params))
     all_suggestions = cursor.fetchall()
 
     # Pagination logic
@@ -1059,7 +1077,9 @@ def voting_view():
                            suggestions=suggestions, 
                            filter_type=filter_type, 
                            page=page, 
-                           total_pages=total_pages)
+                           total_pages=total_pages,
+                           all_statuses=all_statuses, 
+                           selected_statuses=statuses)
 
 
 
