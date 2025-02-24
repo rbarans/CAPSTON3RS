@@ -400,6 +400,27 @@ h2 {
 
 /* ========================= Voting View Page ========================= */
 
+/* Zar */
+.filter-container{ 
+    background-color: #f9f9f9;
+    margin: 40px;
+}   
+
+.view-details {
+    background: none;
+    border: none;
+    color: #ff7575;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: 0 0.25rem;
+}
+
+.view-details:hover {
+    color: #2980b9;
+    background: none;
+}
+/* End of Zar */
+
 /* Card Layout */
 .card-container {
     display: flex;
