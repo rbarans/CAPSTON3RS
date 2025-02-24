@@ -170,12 +170,6 @@
         let confirmation = document.getElementById("vote-confirmation");
 
 
-        window.onload = function() {
-            localStorage.setItem("voteSuccess", "false"); // Set flag to false
-            document.getElementById("vote-confirmation").classList.add("hidden");
-        };
-
-
         // Apply filter selection
         function applyFilter() {
             let selectedFilter = document.getElementById("filter").value;
