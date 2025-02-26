@@ -36,17 +36,17 @@
     }
 
     tbody tr:nth-child(1) {
-        background: gold;
+        background: #e6abc5;
         font-weight: bold;
     }
 
     tbody tr:nth-child(2) {
-        background: silver;
+        background: #e5bcce;
         font-weight: bold;
     }
 
     tbody tr:nth-child(3) {
-        background: #cd7f32;
+        background: #e3c8d4;
         font-weight: bold;
     }
 
@@ -81,8 +81,8 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background-color: #e1c7d2;
-        color: #ea2c7c;
+        background-color:#ea2c7c;
+        color: #e1c7d2;
         font-size: 20px;
         display: flex;
         justify-content: center;
@@ -96,6 +96,10 @@
         display: flex;
         align-items: center;
         gap: 10px;
+    }
+    
+    .medal {
+        font-size: 30px;
     }
 </style>
 <div class="container">
@@ -111,7 +115,17 @@
             <tbody id="leaderboard-body">
                 {% for user in users %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if loop.index == 1 %}
+                                <span> class="medal">🥇</span>
+                            {% elif loop.index == 2 %}
+                                <span> class="medal">🥈</span>
+                            {% elif loop.index == 3 %}
+                                <span> class"medal"🥉</span>
+                            {% else %}
+                                {{ loop.index }}
+                            {% endif %}
+                        </td>
                         <td>
                             <div class="username-container">
                                 <div class="profile-pic">{{ user.initial }}</div>
@@ -149,7 +163,16 @@
                 const row = document.createElement("tr");
 
                 const rank = document.createElement("td");
-                rank.textContent = `#${index + 1}`;
+                
+                if (index === 0) {
+                    rank.innerHTML = "<span class='medal'>🥇</span>";
+                } else if (index === 1) {
+                    rank.innerHTML = "<span class='medal'>🥈</span>";
+                } else if (index === 2) {
+                    rank.innerHTML = "<span class='medal'>🥉</span>";
+                } else {
+                    rank.textContent = `#${index + 1}`;
+                }
 
                 const usernameCell = document.createElement("td");
 
