@@ -9,8 +9,7 @@
     }
 
     h1 {
-        color: #ea2c7c;
-        background: linear-gradient(90deg, #e1c7d2, #e692b7);
+        color: #e692b7;
         padding: 15px;
         border-radius: 10px;
         display: inline-block;
@@ -77,6 +76,27 @@
     .no-change {
         color: gray;
     }
+
+    .profile-pic {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e1c7d2;
+        color: #ea2c7c;
+        font-size: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-right: 10px;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .username-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
 </style>
 <div class="container">
     <h1>Leaderboard</h1>
@@ -92,7 +112,12 @@
                 {% for user in users %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td>{{ user.username }}</td>
+                        <td>
+                            <div class="username-container">
+                                <div class="profile-pic">{{ user.initial }}</div>
+                                <span>{{ user.username }}</span>
+                            </div>
+                        </td>
                         <td>{{ user.points }}</td>
                     </tr>
                 {% endfor %}
@@ -104,45 +129,61 @@
         const leaderboardBody = document.getElementById("leaderboard-body");
 
     fetch("/leaderboard-data")
-    .then(response => {
-        if (!response.ok) {
-            throw new Error("Cannot load leaderboard data");
-        }
-        return response.json();
-    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Cannot load leaderboard data");
+            }
+            return response.json();
+        })
         .then(data => {
+        console.log("Received leaderboard data:", data);      
+
             if (!data.users || data.users.length === 0) {
                 console.warn("No users found in leaderboard data");
                 return;
             }
 
             leaderboardBody.innerHTML = "";
-            let previousPoints = null;
 
             data.users.forEach((user, index) => {
                 const row = document.createElement("tr");
 
                 const rank = document.createElement("td");
-                const username = document.createElement("td");
-                const points = document.createElement("td");
-
                 rank.textContent = `#${index + 1}`;
-                username.textContent = user.username;
+
+                const usernameCell = document.createElement("td");
+
+                const points = document.createElement("td");
                 points.textContent = user.points !== null ? user.points : "-";
+
+                const profilePic = document.createElement("div");
+                profilePic.classList.add("profile-pic");
+                profilePic.textContent = user.username.charAt(0).toUpperCase();
+
+                const usernameContainer = document.createElement("div");
+                usernameContainer.classList.add("username-container");
+                usernameContainer.appendChild(profilePic);
+
+                const usernameText = document.createElement("span");
+                usernameText.textContent = user.username;
+                usernameContainer.appendChild(usernameText);
+
+                usernameCell.appendChild(usernameContainer);
 
                 let arrowClass = "no-change";
                 let arrow = "";
 
-                if (previousPoints !== null) {
-                    if (user.points > previousPoints) {
-                        arrowClass = "up";
-                        arrow = "↑";
-                    } else if (user.points < previousPoints) {
-                        arrowClass = "down";
-                        arrow = "↓";
-                    }
+                if (user.movement === "up") {
+                    arrowClass = "up";
+                    arrow = "↑";
+                } else if (user.movement === "down") {
+                    arrowClass = "down";
+                    arrow = "↓";
+                } else if (user.movement === "no-change") {
+                    arrowClass = "no-change";
+                    arrow = "";
                 }
-
+                
                 const arrowSpan = document.createElement("span");
                 arrowSpan.classList.add("arrow", arrowClass);
                 arrowSpan.textContent = arrow;
@@ -150,12 +191,10 @@
                 points.appendChild(arrowSpan);
 
                 row.appendChild(rank);
-                row.appendChild(username);
+                row.appendChild(usernameCell);
                 row.appendChild(points);
 
                 leaderboardBody.appendChild(row);
-
-                previousPoints = user.points;
             });
         })
         .catch(error => console.error("Cannot load leaderboard:", error));
