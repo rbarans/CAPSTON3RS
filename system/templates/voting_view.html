@@ -365,10 +365,16 @@
             let commentBox = document.getElementById("modalComment");
             let comment = commentBox ? commentBox.value.trim() : "";
 
+            const userId = '{{ user_id }}';  // Get userId from the server
+            const currentIndex = localStorage.getItem("openModalIndex");
+
             // Ensure we keep the existing comment if the user hasn't entered a new one
             if (!comment && suggestions[currentIndex].UserComment) {
                 comment = suggestions[currentIndex].UserComment;
             }
+
+            // Check if the user has voted for this suggestion before
+            const storedVote = localStorage.getItem(`voted-${suggestionId}-${userId}`);
 
             // Retrieve the user's previous vote from localStorage
             let previousVote = localStorage.getItem(`voted-${suggestionId}`);
@@ -383,6 +389,15 @@
                 requestBody.append('comment', comment);
             }
 
+            // If the stored vote is the same as the current vote type, don't count it
+            if (storedVote === voteType) {
+                return;
+            }
+            else {
+                // If no previous vote exists, store the new vote
+                localStorage.setItem(`voted-${suggestionId}-${userId}`, voteType);
+                this.disabled = true;
+
             fetch('/vote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -394,23 +409,15 @@
                         alert("Error: " + data.error);
                         return;
                     }
-
-                    // Ensure users can't vote the same thing multiple times
-                    if (voteType == previousVote) {
-                        return;
+                    
+                    if (currentIndex !== null) {
+                        // Store the modal index before refresh
+                        localStorage.setItem("openModalIndex", currentIndex); 
                     }
-                    else {
-                        // Store the vote selection to localStorage
-                        localStorage.setItem(`voted-${suggestionId}`, voteType);
-
-                        if (currentIndex !== null) {
-                            // Store the modal index before refresh
-                            localStorage.setItem("openModalIndex", currentIndex); 
-                        }
-                        else{ 
-                            window.location.reload();
-                        }
+                    else{ 
+                        window.location.reload();
                     }
+                    
 
                     // Update UI instantly
                     document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
@@ -474,8 +481,6 @@
                         document.getElementById("modalComment").value = "";
                     }
 
-
-
                     // Show confirmation message
                     confirmation = document.getElementById("vote-confirmation");
                     confirmation.classList.remove("hidden");
@@ -487,8 +492,9 @@
                         confirmation.classList.remove("visible");
                         localStorage.removeItem("voteSuccess"); // Clear flag
                     }, 1500);
-                })
-                .catch(error => console.error('Error:', error));
+                }) 
+            .catch(error => console.error('Error:', error));
+            }
         }
 
 
@@ -507,7 +513,6 @@
                 localStorage.removeItem("openModalIndex"); // Clear it after reopening
             }
         });
-
 
     </script>
 </body>

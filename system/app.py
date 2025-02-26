@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from turbo_flask import Turbo
 import math 
 import threading
+import json
 
 app = Flask(__name__)
 app.config['TURBO_USE_CDN'] = True
@@ -941,8 +942,7 @@ def del_suggestion(user_id=None):
 # Zar: route to render the user management
 @app.route('/managesuggestion', methods=['GET'])
 @login_required
-def managesuggestion():
-    
+def managesuggestion():  
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 10  # Number of suggestions per page
@@ -984,9 +984,6 @@ def del_suggestion_admin():
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
-import math
-import json
-
 @app.route('/voting_view')
 @login_required
 def voting_view():
@@ -1081,7 +1078,7 @@ def voting_view():
     cursor.close()
     conn.close()
 
-    return render_template("voting_view.html", 
+    return render_template("voting_view.html", user_id = user_id,
                            suggestions=suggestions, 
                            filter_type=filter_type, 
                            page=page, 
