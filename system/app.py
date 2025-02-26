@@ -1060,7 +1060,9 @@ def leaderboard():
 
     return render_template('leaderboard.html', users=users)
 
-previous_ranks = {}
+# previous_ranks = {}
+app.secret_key = "secret_key"
+
 lock = threading.Lock()
 
 # Jayla: JSON API route for Leaderboard
@@ -1080,14 +1082,17 @@ def leaderboard_data():
             return jsonify(users=[])
             
         leaderboard_data = []
+        previous_ranks = session.get('previous_ranks', {})
 
         with lock:
+            print("Before update - previous_ranks:", previous_ranks)
+
             for index, user in enumerate(users):
                 current_rank = index + 1
-                user_id = user['UserID']
+                user_id = str(user['UserID'])
     
-                previous_rank = previous_ranks.get(user_id, current_rank)
-    
+                previous_rank = int(previous_ranks.get(user_id, current_rank))    
+                
                 if previous_rank > current_rank:
                     movement = 'up'
                 elif previous_rank < current_rank:
@@ -1103,6 +1108,9 @@ def leaderboard_data():
                     'movement': movement,
                     'initial': user['Username'][0].upper()
                 })
+            
+            session['previous_ranks'] = previous_ranks
+            print("After update - previous_ranks:", previous_ranks)
         
         cursor.close()
         conn.close()
