@@ -5,6 +5,7 @@ import datetime
 from datetime import datetime, timedelta
 from turbo_flask import Turbo
 import math 
+import threading
 
 
 app = Flask(__name__)
@@ -1059,24 +1060,59 @@ def leaderboard():
 
     return render_template('leaderboard.html', users=users)
 
+previous_ranks = {}
+lock = threading.Lock()
 
 # Jayla: JSON API route for Leaderboard
 @app.route('/leaderboard-data')
 @login_required
 def leaderboard_data():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT UserID, Username, Points FROM User ORDER BY Points DESC LIMIT 10")
+        users = cursor.fetchall()
 
-    cursor.execute("SELECT UserID, Username, Points FROM User ORDER BY Points DESC LIMIT 10")
-    users = cursor.fetchall()
+        # leaderboard_data = [{'username': user['Username'], 'points': user['Points']} for user in users]
+        if not users:
+            print("No users found")
+            return jsonify(users=[])
+            
+        leaderboard_data = []
 
-    leaderboard_data = [{'username': user['Username'], 'points': user['Points']} for user in users]
-
-    cursor.close()
-    conn.close()
-
-    return jsonify(users=leaderboard_data)
+        with lock:
+            for index, user in enumerate(users):
+                current_rank = index + 1
+                user_id = user['UserID']
+    
+                previous_rank = previous_ranks.get(user_id, current_rank)
+    
+                if previous_rank > current_rank:
+                    movement = 'up'
+                elif previous_rank < current_rank:
+                    movement = 'down'
+                else:
+                    movement = 'no-change'
+        
+                previous_ranks[user_id] = current_rank
+        
+                leaderboard_data.append({
+                    'username': user['Username'],
+                    'points': user['Points'],
+                    'movement': movement,
+                    'initial': user['Username'][0].upper()
+                })
+        
+        cursor.close()
+        conn.close()
+            
+        print("Leaderboard data:", leaderboard_data)
+        return jsonify(users=leaderboard_data)
+            
+    except Exception as e:
+        print("Error in leaderboard_data route:", str(e))
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
 
 
 if __name__ == '__main__':
