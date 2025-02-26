@@ -7,7 +7,6 @@ from turbo_flask import Turbo
 import math 
 import threading
 
-
 app = Flask(__name__)
 app.config['TURBO_USE_CDN'] = True
 turbo = Turbo(app)
@@ -985,8 +984,8 @@ def del_suggestion_admin():
 
 #Jacob - Function to View all Suggestions (where we will do voting) and order them based on filter
 # TODO: ADD Voting System into this route and reformat each suggestion box to look nicer (Maybe Don't use a table, we'll discuss possible alternatives)
-from flask import request, render_template
 import math
+import json
 
 @app.route('/voting_view')
 @login_required
@@ -1000,7 +999,7 @@ def voting_view():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Zar: Fetch all statuses
+    # Fetch all statuses
     cursor.execute("SELECT StatusName FROM Status")
     all_statuses = cursor.fetchall()
 
@@ -1008,54 +1007,59 @@ def voting_view():
         SELECT 
             s.SuggestionID,
             s.Description,
+            s.Comments AS SuggestionComments, 
             s.CreatedDate,
-            s.Comments AS SuggestionComments,  -- Renamed for clarity
-            COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) AS PositiveVote,
-            COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0) AS NegativeVote,
-            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) - 
-             COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS NetVotes,
-            (COALESCE(SUM(CASE WHEN v.VoteType = 1 THEN 1 ELSE 0 END), 0) + 
-             COALESCE(SUM(CASE WHEN v.VoteType = 0 THEN 1 ELSE 0 END), 0)) AS TotalVotes,
+            s.PositiveVote,
+            s.NegativeVote,
+            s.NetVotes,
 
-            -- Get the status based on net votes
-            (SELECT StatusName FROM Status st WHERE NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) AS StatusName,
+            -- Get the status based on net votes directly from Status table
+            (SELECT StatusName 
+            FROM Status st 
+            WHERE s.NetVotes >= st.Threshold 
+            ORDER BY st.Threshold DESC 
+            LIMIT 1) AS StatusName,
 
             -- Retrieve the current user's vote type and comment (if they exist)
-            (SELECT VoteType FROM Vote WHERE UserID = %s AND SuggestionID = s.SuggestionID LIMIT 1) AS UserVote,
-            (SELECT Comment FROM Vote WHERE UserID = %s AND SuggestionID = s.SuggestionID LIMIT 1) AS UserComment,
+            (SELECT VoteType 
+            FROM Vote 
+            WHERE UserID = %s AND SuggestionID = s.SuggestionID 
+            LIMIT 1) AS UserVote,
+            (SELECT Comment 
+            FROM Vote 
+            WHERE UserID = %s AND SuggestionID = s.SuggestionID 
+            LIMIT 1) AS UserComment,
 
             -- Retrieve all vote comments along with usernames
             (SELECT JSON_ARRAYAGG(JSON_OBJECT('UserName', u.Username, 'Comment', v.Comment))
-                FROM Vote v
-                JOIN User u ON v.UserID = u.UserID
-                WHERE v.SuggestionID = s.SuggestionID AND v.Comment IS NOT NULL) AS VoteComments
+            FROM Vote v
+            JOIN User u ON v.UserID = u.UserID
+            WHERE v.SuggestionID = s.SuggestionID AND v.Comment IS NOT NULL) AS VoteComments
 
         FROM Suggestion s
-        LEFT JOIN Vote v ON s.SuggestionID = v.SuggestionID
         WHERE 1=1
     """
-    #Zar:
+
     params = [user_id, user_id]
 
     if statuses:
-        query += " AND (SELECT StatusName FROM Status st WHERE NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) IN (%s)" % ','.join(['%s'] * len(statuses))
+        # Modify the query to filter by StatusName using an IN clause
+        query += " AND (SELECT StatusName FROM Status st WHERE s.NetVotes >= st.Threshold ORDER BY st.Threshold DESC LIMIT 1) IN (%s)" % ','.join(['%s'] * len(statuses))
         params.extend(statuses)
-  
 
+    # Remove vs columns from GROUP BY
     query += """ 
-            GROUP BY s.SuggestionID, s.Description, s.CreatedDate, s.Comments
-        """
-    #------- End 
+        GROUP BY s.SuggestionID, s.Description, s.CreatedDate, s.Comments, s.PositiveVote, s.NegativeVote, s.NetVotes
+    """
 
     # Apply filters
     if filter_type == 'newest':
         query += " ORDER BY s.CreatedDate DESC"
     elif filter_type == 'trending':
-        query += " ORDER BY TotalVotes DESC"
+        query += " ORDER BY s.PositiveVote + s.NegativeVote DESC"  # Assuming TotalVotes is the sum of these
     elif filter_type == 'status':
-        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), NetVotes DESC"
+        query += " ORDER BY FIELD(StatusName, 'Implemented', 'Possible', 'Even', 'Unlikely'), s.NetVotes DESC"
 
- 
     cursor.execute(query, tuple(params))
     all_suggestions = cursor.fetchall()
 
@@ -1069,7 +1073,10 @@ def voting_view():
     # Convert JSON string to Python dictionary for VoteComments
     for suggestion in suggestions:
         if suggestion["VoteComments"]:
-            suggestion["VoteComments"] = eval(suggestion["VoteComments"])
+            try:
+                suggestion["VoteComments"] = json.loads(suggestion["VoteComments"])
+            except json.JSONDecodeError:
+                suggestion["VoteComments"] = []
 
     cursor.close()
     conn.close()
@@ -1081,6 +1088,8 @@ def voting_view():
                            total_pages=total_pages,
                            all_statuses=all_statuses, 
                            selected_statuses=statuses)
+
+
 
 
 
