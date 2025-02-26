@@ -265,6 +265,7 @@ def login():
 
 # Rana: route to log out 
 @app.route('/logout')
+@login_required
 def logout():
     if current_user.is_authenticated:
 
@@ -312,6 +313,7 @@ def logout():
 
 # Rana: Route to daily emoji rating
 @app.route('/rate_day', methods=['POST'])
+@login_required
 def rate_day():
     if current_user.is_authenticated:
         user_id = current_user.id
@@ -1085,9 +1087,6 @@ def voting_view():
                            total_pages=total_pages,
                            all_statuses=all_statuses, 
                            selected_statuses=statuses)
-
-
-
 
 
 # Jacob: Route to handle voting
