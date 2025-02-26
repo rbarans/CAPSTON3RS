@@ -207,6 +207,7 @@
 
         function closeModal() {
             document.getElementById("suggestionModal").style.display = "none";
+            window.location.reload();
         }
 
         function updateModal() {
@@ -218,6 +219,7 @@
                 document.getElementById("modalUpvoteCount").innerText = currentSuggestion.PositiveVote || 0;
                 document.getElementById("modalDownvoteCount").innerText = currentSuggestion.NegativeVote || 0;
                 document.getElementById("modalDate").innerText = " " + currentSuggestion.CreatedDate;
+                
                 // Get modal vote buttons
                 const modalUpvote = document.querySelector(".modal-vote-buttons .upvote");
                 const modalDownvote = document.querySelector(".modal-vote-buttons .downvote");
@@ -235,9 +237,9 @@
                 }
 
                 // Apply highlighting to the modal buttons if a previous vote exists
-                if (votedType === 'upvote') {
+                if (votedType === 1) {
                     modalUpvote.classList.add("votedyes", "voted");
-                } else if (votedType === 'downvote') {
+                } else if (votedType === 0) {
                     modalDownvote.classList.add("votedno", "voted");
                 }
 
@@ -255,6 +257,7 @@
                     commentsList.innerHTML = "<li>No comments yet.</li>";
                 }
             }
+        
 
             // Submit a new comment
             function submitComment() {
@@ -282,6 +285,28 @@
                             return;
                         }
 
+                        // Ensure users can't vote the same thing multiple times
+                        if (voteType == previousVote) {
+                            return;
+                        }
+                        else {
+                            // Store the vote selection to localStorage
+                            localStorage.setItem(`voted-${suggestionId}`, voteType);
+
+                        }
+
+                        // Update UI instantly
+                        document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                        document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                        document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+
+
+                        // Update the modal's vote counts
+                        modalUpvoteCount = document.getElementById('modalUpvoteCount');
+                        modalDownvoteCount = document.getElementById('modalDownvoteCount');
+                        if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
+                        if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
+
                         // Assuming the API returns a success status
                         localStorage.setItem("voteSuccess", "true"); // Set flag to true
 
@@ -307,7 +332,7 @@
                         // Show confirmation message
                         confirmation = document.getElementById("vote-confirmation");
                         confirmation.classList.remove("hidden");
-                        confirmation.classList.add(" visible");
+                        confirmation.classList.add("visible");
 
 
                         // Keep message visible for 1.5 seconds, then hide it
@@ -336,7 +361,6 @@
             }
         }
 
-        // Function to vote
         function castVote(suggestionId, voteType) {
             let commentBox = document.getElementById("modalComment");
             let comment = commentBox ? commentBox.value.trim() : "";
@@ -345,6 +369,9 @@
             if (!comment && suggestions[currentIndex].UserComment) {
                 comment = suggestions[currentIndex].UserComment;
             }
+
+            // Retrieve the user's previous vote from localStorage
+            let previousVote = localStorage.getItem(`voted-${suggestionId}`);
 
             let requestBody = new URLSearchParams({
                 'suggestion_id': suggestionId,
@@ -367,6 +394,34 @@
                         alert("Error: " + data.error);
                         return;
                     }
+
+                    // Ensure users can't vote the same thing multiple times
+                    if (voteType == previousVote) {
+                        return;
+                    }
+                    else {
+                        // Store the vote selection to localStorage
+                        localStorage.setItem(`voted-${suggestionId}`, voteType);
+
+                        if (currentIndex !== null) {
+                            // Store the modal index before refresh
+                            localStorage.setItem("openModalIndex", currentIndex); 
+                        }
+                        else{ 
+                            window.location.reload();
+                        }
+                    }
+
+                    // Update UI instantly
+                    document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                    document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                    document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+
+                    // Update the modal's vote counts
+                    let modalUpvoteCount = document.getElementById('modalUpvoteCount');
+                    let modalDownvoteCount = document.getElementById('modalDownvoteCount');
+                    if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
+                    if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
 
                     // Show the confirmation message
                     let confirmation = document.getElementById("vote-confirmation");
@@ -419,14 +474,12 @@
                         document.getElementById("modalComment").value = "";
                     }
 
-                    // Store the modal index before refresh
-                    localStorage.setItem("openModalIndex", currentIndex);
+
 
                     // Show confirmation message
                     confirmation = document.getElementById("vote-confirmation");
                     confirmation.classList.remove("hidden");
-                    confirmation.classList.add(" visible");
-
+                    confirmation.classList.add("visible");
 
                     // Keep message visible for 1.5 seconds, then hide it
                     setTimeout(() => {
@@ -438,62 +491,23 @@
                 .catch(error => console.error('Error:', error));
         }
 
+
         function castVoteFromModal(voteType) {
             let suggestionId = suggestions[currentIndex].SuggestionID;
             localStorage.setItem("openModalIndex", currentIndex);
             castVote(suggestionId, voteType);
         }
 
-        // Highlight user's previous vote
-        document.addEventListener("DOMContentLoaded", function () {
-            if (localStorage.getItem("voteSuccess") === "true") {
-                confirmation = document.getElementById("vote-confirmation");
-                confirmation.classList.remove("hidden");
-                confirmation.classList.add(" visible");
-
-
-                // Keep message visible for 1.5 seconds, then hide it
-                setTimeout(() => {
-                    confirmation.classList.add("hidden");
-                    confirmation.classList.remove("visible");
-                    localStorage.removeItem("voteSuccess"); // Clear flag
-                }, 1500);
-            }
-
-            document.querySelectorAll(".suggestion-card").forEach((card) => {
-                let suggestionId = card.dataset.id;
-                let suggestion = suggestions.find(s => s.SuggestionID == suggestionId);
-
-                if (suggestion && suggestion.UserVote !== null) {
-                    if (suggestion.UserVote == 1) {
-                        document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes", "voted");
-                    } else if (suggestion.UserVote == 0) {
-                        document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno", "voted");
-                    }
-                }
-            });
-        });
-
         document.addEventListener("DOMContentLoaded", function () {
             // Check if we should reopen a modal
             let savedIndex = localStorage.getItem("openModalIndex");
 
             if (localStorage.getItem("voteSuccess") === "true" && savedIndex !== null) {
-                confirmation = document.getElementById("vote-confirmation");
-                confirmation.classList.remove("hidden");
-                confirmation.classList.add(" visible");
-
-
-                // Keep message visible for 1.5 seconds, then hide it
-                setTimeout(() => {
-                    confirmation.classList.add("hidden");
-                    confirmation.classList.remove("visible");
-                    localStorage.removeItem("voteSuccess"); // Clear flag
-                }, 1500);
                 openModal(parseInt(savedIndex));
                 localStorage.removeItem("openModalIndex"); // Clear it after reopening
             }
         });
+
 
     </script>
 </body>
