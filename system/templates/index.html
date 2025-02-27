@@ -13,7 +13,7 @@
         <!-- Leaderboard Position Change -->
         {% if leaderboard_change %}
         <ul>
-            <li>{{ leaderboard_change }}<a href="{{ url_for('leaderboard') }}" class="nav-link">View Leaderboard</a></li>
+            <li><strong>{{ leaderboard_change }}</strong><a href="{{ url_for('leaderboard') }}" class="nav-link">View Leaderboard</a></li>
         </ul>
         {% endif %}
 
@@ -22,7 +22,9 @@
             <p>⭐ Your suggestions received votes:</p>
             <ul>
                 {% for vote in votes_received %}
-                    <li><strong>⭐ "{{ vote.Description }}"</strong> received <strong>{{ vote.VoteCount }}</strong> new vote(s)!<a href="{{ url_for('voting_view') }}" class="nav-link">View Voting Page</a></li>
+                    <li><strong>⭐ "{{ vote.Description }}"</strong>has received<strong>{{ vote.VoteCount }}</strong>vote(s)!
+                    <a href="{{ url_for('voting_view', suggestion_id=vote.SuggestionID) }}" class="nav-link">View Suggestion</a>
+                    </li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -32,7 +34,9 @@
             <p>🔄 Your suggestions had status updates:</p>
             <ul>
                 {% for update in status_updates %}
-                    <li><strong>🔄 "{{ update.Description }}"</strong>status changed to<em>{{ update.StatusName }}</em></li>
+                    <li><strong>🔄 "{{ update.Description }}"</strong>status changed to<em>{{ update.StatusName }}</em>
+                    <a href="{{ url_for('voting_view', status=update.StatusName) }}" class="nav-link">View Category</a>
+                    </li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -42,7 +46,9 @@
             <p>💬 New comments on your suggestions:</p>
             <ul>
                 {% for comment in comments_received %}
-                    <li><strong>💬 Anonymous</strong> commented on <strong>"{{ comment.Description }}"</strong>: "{{ comment.Comment }}"</li>
+                    <li><strong>💬 Anonymous</strong> commented on <strong>"{{ comment.Description }}"</strong>: "{{ comment.Comment }}"
+                    <a href="{{ url_for('voting_view', suggestion_id=comment.SuggestionID, vote_id=comment.VoteID) }}" class="nav-link">View Comment</a>
+                    </li>
                 {% endfor %}
             </ul>
         {% endif %}

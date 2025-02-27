@@ -199,12 +199,42 @@
             });
         });
 
-        function openModal(suggestionId) {
-            currentIndex = suggestions.findIndex(s => s.SuggestionID == suggestionId);
-            if (currentIndex === -1) return; // Prevents errors if the suggestion isn't found
+        function openModal(suggestionId, voteId = null) {
+            // Find the index of the suggestion with the given SuggestionID
+            let suggestionIndex = suggestions.findIndex(s => s.SuggestionID == suggestionId);
 
-            updateModal();
-            document.getElementById("suggestionModal").style.display = "block";
+            if (suggestionIndex !== -1) { 
+                currentIndex = suggestionIndex;  // Set the correct index
+                updateModal();  // Populate modal with correct data
+                document.getElementById("suggestionModal").style.display = "block";
+
+                // If a comment should be highlighted, scroll to the comments section
+                if (voteId) {
+                    setTimeout(() => {
+                        let commentElements = document.querySelectorAll("#modalCommentsList li");
+                        
+                        commentElements.forEach(comment => {
+
+                            if (comment.dataset.voteId && comment.dataset.voteId === voteId.toString()) {
+                                comment.style.backgroundColor = "#fcaccf"; // Light pink highlight
+                                comment.style.borderRadius = "8px"; //Rounded corners
+                                comment.style.transition = "background-color 1.5s ease-out, padding 1.5s ease-out"; // Smooth fade effect
+                                comment.style.padding = "5px"; // Ensure alignment with other comments
+
+                                comment.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                                // Start fade-out after 4 seconds
+                                setTimeout(() => {
+                                    comment.style.padding = ""; // Gradually reduce padding
+                                    comment.style.backgroundColor = "transparent"; // Fade out color
+                                }, 4000);                                
+                            }
+                        });
+                    }, 500);
+                }
+            } else {
+                console.error("Suggestion not found for ID:", suggestionId);
+            }
         }
 
         function closeModal() {
@@ -252,6 +282,7 @@
                 if (currentSuggestion.VoteComments && currentSuggestion.VoteComments.length > 0) {
                     currentSuggestion.VoteComments.forEach(comment => {
                         let commentItem = document.createElement("li");
+                        commentItem.dataset.voteId = comment.VoteID; // Store VoteID in data attribute
                         commentItem.innerHTML = `<strong>Anonymous:</strong> ${comment.Comment}`;
                         commentsList.appendChild(commentItem);
                     });
@@ -539,6 +570,46 @@
                 openModal(parseInt(savedSuggestionId));
                 localStorage.removeItem("openSuggestionId"); // Clear it after reopening
             }
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const suggestionId = urlParams.get("suggestion_id");
+                const voteId = urlParams.get("vote_id");  // Get vote_id for comment
+
+
+                if (suggestionId) {
+                    openModal(suggestionId, voteId);
+                }
+            }, 700); // Wait 700ms to ensure suggestions are fully loaded
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const status = urlParams.get("status");  // Get status from URL
+
+                if (status) {
+                    let alreadyChecked = false;
+
+                    // Check if the status filter is already applied
+                    document.querySelectorAll('input[name="status"]').forEach(checkbox => {
+                        if (checkbox.value === status) {
+                            if (!checkbox.checked) {
+                                checkbox.checked = true;
+                            } else {
+                                alreadyChecked = true;  // Status is already checked, no need to reload
+                            }
+                        }
+                    });
+
+                    // ✅ Only apply filter if it's not already active
+                    if (!alreadyChecked) {
+                        applyStatusFilter();
+                    }
+                }
+            }, 500);  // Ensure the page has fully loaded before applying filters
         });
 
     </script>
