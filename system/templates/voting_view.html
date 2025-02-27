@@ -194,20 +194,22 @@
         document.querySelectorAll(".view-details").forEach((link) => {
             link.addEventListener("click", function (event) {
                 event.stopPropagation();
-                let index = parseInt(link.dataset.index);
-                openModal(index);
+                let suggestionId = this.closest(".suggestion-card").dataset.id;
+                openModal(suggestionId);
             });
         });
 
-        function openModal(index) {
-            currentIndex = index;
+        function openModal(suggestionId) {
+            currentIndex = suggestions.findIndex(s => s.SuggestionID == suggestionId);
+            if (currentIndex === -1) return; // Prevents errors if the suggestion isn't found
+
             updateModal();
             document.getElementById("suggestionModal").style.display = "block";
         }
 
         function closeModal() {
             document.getElementById("suggestionModal").style.display = "none";
-            window.location.reload();
+            // window.location.reload();
         }
 
         function updateModal() {
@@ -295,20 +297,21 @@
 
                         }
 
-                        // Update UI instantly
-                        document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
-                        document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
-                        document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+
+                        // // Update UI instantly
+                        // document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                        // document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                        // document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
 
 
                         // Update the modal's vote counts
-                        modalUpvoteCount = document.getElementById('modalUpvoteCount');
-                        modalDownvoteCount = document.getElementById('modalDownvoteCount');
-                        if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
-                        if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
+                        // modalUpvoteCount = document.getElementById('modalUpvoteCount');
+                        // modalDownvoteCount = document.getElementById('modalDownvoteCount');
+                        // if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
+                        // if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
 
                         // Assuming the API returns a success status
-                        localStorage.setItem("voteSuccess", "true"); // Set flag to true
+                        // localStorage.setItem("voteSuccess", "true"); // Set flag to true
 
                         // Fetch the updated comments from response
                         let updatedComments = data.updated_comments;
@@ -330,17 +333,17 @@
                         document.getElementById("modalComment").value = "";
 
                         // Show confirmation message
-                        confirmation = document.getElementById("vote-confirmation");
-                        confirmation.classList.remove("hidden");
-                        confirmation.classList.add("visible");
+                        // confirmation = document.getElementById("vote-confirmation");
+                        // confirmation.classList.remove("hidden");
+                        // confirmation.classList.add("visible");
 
 
-                        // Keep message visible for 1.5 seconds, then hide it
-                        setTimeout(() => {
-                            confirmation.classList.add("hidden");
-                            confirmation.classList.remove("visible");
-                            localStorage.removeItem("voteSuccess"); // Clear flag
-                        }, 1500);
+                        // // Keep message visible for 1.5 seconds, then hide it
+                        // setTimeout(() => {
+                        //     confirmation.classList.add("hidden");
+                        //     confirmation.classList.remove("visible");
+                        //     localStorage.removeItem("voteSuccess"); // Clear flag
+                        // }, 1500);
                         
                     })
                     .catch(error => console.error('Error:', error));
@@ -350,14 +353,14 @@
         function prevSuggestion() {
             if (currentIndex > 0) {
                 currentIndex--;
-                updateModal();
+                openModal(suggestions[currentIndex].SuggestionID);
             }
         }
 
         function nextSuggestion() {
             if (currentIndex < suggestions.length - 1) {
                 currentIndex++;
-                updateModal();
+                openModal(suggestions[currentIndex].SuggestionID);
             }
         }
 
@@ -366,7 +369,7 @@
             let comment = commentBox ? commentBox.value.trim() : "";
 
             const userId = '{{ user_id }}';  // Get userId from the server
-            const currentIndex = localStorage.getItem("openModalIndex");
+            // const currentIndex = localStorage.getItem("openModalIndex");
 
             // Ensure we keep the existing comment if the user hasn't entered a new one
             if (!comment && suggestions[currentIndex].UserComment) {
@@ -410,36 +413,36 @@
                         return;
                     }
                     
-                    if (currentIndex !== null) {
-                        // Store the modal index before refresh
-                        localStorage.setItem("openModalIndex", currentIndex); 
-                    }
-                    else{ 
-                        window.location.reload();
-                    }
+                    // if (currentIndex !== null) {
+                    //     // Store the modal index before refresh
+                    //     localStorage.setItem("openModalIndex", currentIndex); 
+                    // }
+                    // else{ 
+                    //     window.location.reload();
+                    // }
                     
 
-                    // Update UI instantly
-                    document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
-                    document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
-                    document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
+                    // // Update UI instantly
+                    // document.getElementById(`upvote-${suggestionId}`).innerText = data.new_upvotes;
+                    // document.getElementById(`downvote-${suggestionId}`).innerText = data.new_downvotes;
+                    // document.getElementById(`status-${suggestionId}`).innerText = data.new_status;
 
                     // Update the modal's vote counts
-                    let modalUpvoteCount = document.getElementById('modalUpvoteCount');
-                    let modalDownvoteCount = document.getElementById('modalDownvoteCount');
-                    if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
-                    if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
+                    // let modalUpvoteCount = document.getElementById('modalUpvoteCount');
+                    // let modalDownvoteCount = document.getElementById('modalDownvoteCount');
+                    // if (modalUpvoteCount) modalUpvoteCount.innerText = data.new_upvotes;
+                    // if (modalDownvoteCount) modalDownvoteCount.innerText = data.new_downvotes;
 
-                    // Show the confirmation message
-                    let confirmation = document.getElementById("vote-confirmation");
-                    confirmation.classList.remove("hidden");
-                    confirmation.classList.add("visible");
+                    // // Show the confirmation message
+                    // let confirmation = document.getElementById("vote-confirmation");
+                    // confirmation.classList.remove("hidden");
+                    // confirmation.classList.add("visible");
 
-                    // Hide it after 1.5 seconds
-                    setTimeout(() => {
-                        confirmation.classList.remove("visible");
-                        confirmation.classList.add("hidden");
-                    }, 1500);
+                    // // Hide it after 1.5 seconds
+                    // setTimeout(() => {
+                    //     confirmation.classList.remove("visible");
+                    //     confirmation.classList.add("hidden");
+                    // }, 1500);
 
                     // Get buttons in both card and modal
                     const upvoteButton = document.getElementById(`upvote-btn-${suggestionId}`);
@@ -481,6 +484,9 @@
                         document.getElementById("modalComment").value = "";
                     }
 
+                    // Store the modal index before refresh
+                    localStorage.setItem("openSuggestionId", suggestionId);
+
                     // Show confirmation message
                     confirmation = document.getElementById("vote-confirmation");
                     confirmation.classList.remove("hidden");
@@ -492,6 +498,11 @@
                         confirmation.classList.remove("visible");
                         localStorage.removeItem("voteSuccess"); // Clear flag
                     }, 1500);
+
+                    // Reload after 700 ms
+                setTimeout(() => {
+                    location.reload();
+                }, 700);
                 }) 
             .catch(error => console.error('Error:', error));
             }
@@ -500,17 +511,33 @@
 
         function castVoteFromModal(voteType) {
             let suggestionId = suggestions[currentIndex].SuggestionID;
-            localStorage.setItem("openModalIndex", currentIndex);
+            if (!suggestionId) return;
+
+            localStorage.setItem("openSuggestionId", suggestionId);
             castVote(suggestionId, voteType);
         }
 
+        document.querySelectorAll(".suggestion-card").forEach((card) => {
+                let suggestionId = card.dataset.id;
+                let suggestion = suggestions.find(s => s.SuggestionID == suggestionId);
+
+                if (suggestion && suggestion.UserVote !== null) {
+                    if (suggestion.UserVote == 1) {
+                        document.getElementById(`upvote-btn-${suggestionId}`).classList.add("votedyes", "voted");
+                    } else if (suggestion.UserVote == 0) {
+                        document.getElementById(`downvote-btn-${suggestionId}`).classList.add("votedno", "voted");
+                    }
+                }
+                });
+            
+
         document.addEventListener("DOMContentLoaded", function () {
             // Check if we should reopen a modal
-            let savedIndex = localStorage.getItem("openModalIndex");
+            let savedSuggestionId = localStorage.getItem("openSuggestionId");
 
-            if (localStorage.getItem("voteSuccess") === "true" && savedIndex !== null) {
-                openModal(parseInt(savedIndex));
-                localStorage.removeItem("openModalIndex"); // Clear it after reopening
+            if (savedSuggestionId !== null) {
+                openModal(parseInt(savedSuggestionId));
+                localStorage.removeItem("openSuggestionId"); // Clear it after reopening
             }
         });
 
