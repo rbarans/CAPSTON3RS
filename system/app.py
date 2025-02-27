@@ -126,7 +126,7 @@ def home():
 
     # Fetch votes received on user's suggestions
     cursor.execute("""
-        SELECT s.Description, COUNT(v.VoteID) AS VoteCount
+        SELECT s.SuggestionID, s.Description, COUNT(v.VoteID) AS VoteCount
         FROM Vote v
         JOIN Suggestion s ON v.SuggestionID = s.SuggestionID
         WHERE s.UserID = %s
@@ -155,12 +155,13 @@ def home():
 
     # Fetch new comments on user's suggestions
     cursor.execute("""
-        SELECT s.Description, u.Username, v.Comment
+        SELECT v.SuggestionID, s.Description, u.Username, v.Comment, v.VoteID
         FROM Vote v
         JOIN Suggestion s ON v.SuggestionID = s.SuggestionID
         JOIN User u ON v.UserID = u.UserID
         WHERE s.UserID = %s AND v.Comment IS NOT NULL
         ORDER BY v.VotedDate DESC
+        LIMIT 10
     """, (user_id,))
     comments_received = cursor.fetchall()
 
@@ -1030,7 +1031,7 @@ def voting_view():
             LIMIT 1) AS UserComment,
 
             -- Retrieve all vote comments along with usernames
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('UserName', u.Username, 'Comment', v.Comment))
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('UserName', u.Username, 'Comment', v.Comment, 'VoteID', v.VoteID))
             FROM Vote v
             JOIN User u ON v.UserID = u.UserID
             WHERE v.SuggestionID = s.SuggestionID AND v.Comment IS NOT NULL) AS VoteComments
