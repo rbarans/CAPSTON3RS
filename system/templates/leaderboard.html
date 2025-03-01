@@ -8,12 +8,12 @@
         text-align: center;
     }
 
-    h1 {
+    /*  h1 {
         color: #e692b7;
         padding: 15px;
         border-radius: 10px;
         display: inline-block;
-    }
+    }*/
 
     table {
         width: 60%;
@@ -24,14 +24,15 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
-    th, td {
+    th,
+    td {
         padding: 12px 15px;
         text-align: center;
         font-size: 18px;
     }
 
     thead {
-        background-color: #e692b7;
+        background-color: #ea8fb6;
         color: #fff;
     }
 
@@ -81,7 +82,7 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background-color:#ea2c7c;
+        background-color: #ea2c7c;
         color: #e1c7d2;
         font-size: 20px;
         display: flex;
@@ -97,130 +98,132 @@
         align-items: center;
         gap: 10px;
     }
-    
+
     .medal {
         font-size: 30px;
     }
 </style>
 <div class="container">
     <h1>Leaderboard</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Username</th>
-                    <th>Points</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-                {% for user in users %}
-                    <tr>
-                        <td>
-                            {% if loop.index == 1 %}
-                                <span> class="medal">🥇</span>
-                            {% elif loop.index == 2 %}
-                                <span> class="medal">🥈</span>
-                            {% elif loop.index == 3 %}
-                                <span> class"medal"🥉</span>
-                            {% else %}
-                                {{ loop.index }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="username-container">
-                                <div class="profile-pic">{{ user.initial }}</div>
-                                <span>{{ user.username }}</span>
-                            </div>
-                        </td>
-                        <td>{{ user.points }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Username</th>
+                <th>Points</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+            {% for user in users %}
+            <tr>
+                <td>
+                    <!-- Zar: Bug Fixes -->
+                    {% if loop.index == 1 %}
+                    <span class="medal">🥇</span>
+                    {% elif loop.index == 2 %}
+                    <span class="medal">🥈</span>
+                    {% elif loop.index == 3 %}
+                    <span class="medal">🥉</span>
+                    {% else %}
+                        {{ loop.index }}
+                    {% endif %}
+                    <!-- Zar: Bug Fixes -->
+                </td>
+                <td>
+                    <div class="username-container">
+                        <div class="profile-pic">{{ user.initial }}</div>
+                        <span>{{ user.username }}</span>
+                    </div>
+                </td>
+                <td>{{ user.points }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const leaderboardBody = document.getElementById("leaderboard-body");
 
-    fetch("/leaderboard-data")
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Cannot load leaderboard data");
-            }
-            return response.json();
-        })
-        .then(data => {
-        console.log("Received leaderboard data:", data);      
+        fetch("/leaderboard-data")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Cannot load leaderboard data");
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Received leaderboard data:", data);
 
-            if (!data.users || data.users.length === 0) {
-                console.warn("No users found in leaderboard data");
-                return;
-            }
-
-            leaderboardBody.innerHTML = "";
-
-            data.users.forEach((user, index) => {
-                const row = document.createElement("tr");
-
-                const rank = document.createElement("td");
-                
-                if (index === 0) {
-                    rank.innerHTML = "<span class='medal'>🥇</span>";
-                } else if (index === 1) {
-                    rank.innerHTML = "<span class='medal'>🥈</span>";
-                } else if (index === 2) {
-                    rank.innerHTML = "<span class='medal'>🥉</span>";
-                } else {
-                    rank.textContent = `#${index + 1}`;
+                if (!data.users || data.users.length === 0) {
+                    console.warn("No users found in leaderboard data");
+                    return;
                 }
 
-                const usernameCell = document.createElement("td");
+                leaderboardBody.innerHTML = "";
 
-                const points = document.createElement("td");
-                points.textContent = user.points !== null ? user.points : "-";
+                data.users.forEach((user, index) => {
+                    const row = document.createElement("tr");
 
-                const profilePic = document.createElement("div");
-                profilePic.classList.add("profile-pic");
-                profilePic.textContent = user.username.charAt(0).toUpperCase();
+                    const rank = document.createElement("td");
 
-                const usernameContainer = document.createElement("div");
-                usernameContainer.classList.add("username-container");
-                usernameContainer.appendChild(profilePic);
+                    if (index === 0) {
+                        rank.innerHTML = "<span class='medal'>🥇</span>";
+                    } else if (index === 1) {
+                        rank.innerHTML = "<span class='medal'>🥈</span>";
+                    } else if (index === 2) {
+                        rank.innerHTML = "<span class='medal'>🥉</span>";
+                    } else {
+                        rank.textContent = `#${index + 1}`;
+                    }
 
-                const usernameText = document.createElement("span");
-                usernameText.textContent = user.username;
-                usernameContainer.appendChild(usernameText);
+                    const usernameCell = document.createElement("td");
 
-                usernameCell.appendChild(usernameContainer);
+                    const points = document.createElement("td");
+                    points.textContent = user.points !== null ? user.points : "-";
 
-                let arrowClass = "no-change";
-                let arrow = "";
+                    const profilePic = document.createElement("div");
+                    profilePic.classList.add("profile-pic");
+                    profilePic.textContent = user.username.charAt(0).toUpperCase();
 
-                if (user.movement === "up") {
-                    arrowClass = "up";
-                    arrow = "↑";
-                } else if (user.movement === "down") {
-                    arrowClass = "down";
-                    arrow = "↓";
-                } else if (user.movement === "no-change") {
-                    arrowClass = "no-change";
-                    arrow = "";
-                }
-                
-                const arrowSpan = document.createElement("span");
-                arrowSpan.classList.add("arrow", arrowClass);
-                arrowSpan.textContent = arrow;
+                    const usernameContainer = document.createElement("div");
+                    usernameContainer.classList.add("username-container");
+                    usernameContainer.appendChild(profilePic);
 
-                points.appendChild(arrowSpan);
+                    const usernameText = document.createElement("span");
+                    usernameText.textContent = user.username;
+                    usernameContainer.appendChild(usernameText);
 
-                row.appendChild(rank);
-                row.appendChild(usernameCell);
-                row.appendChild(points);
+                    usernameCell.appendChild(usernameContainer);
 
-                leaderboardBody.appendChild(row);
-            });
-        })
-        .catch(error => console.error("Cannot load leaderboard:", error));
+                    let arrowClass = "no-change";
+                    let arrow = "";
+
+                    if (user.movement === "up") {
+                        arrowClass = "up";
+                        arrow = "↑";
+                    } else if (user.movement === "down") {
+                        arrowClass = "down";
+                        arrow = "↓";
+                    } else if (user.movement === "no-change") {
+                        arrowClass = "no-change";
+                        arrow = "";
+                    }
+
+                    const arrowSpan = document.createElement("span");
+                    arrowSpan.classList.add("arrow", arrowClass);
+                    arrowSpan.textContent = arrow;
+
+                    points.appendChild(arrowSpan);
+
+                    row.appendChild(rank);
+                    row.appendChild(usernameCell);
+                    row.appendChild(points);
+
+                    leaderboardBody.appendChild(row);
+                });
+            })
+            .catch(error => console.error("Cannot load leaderboard:", error));
     });
 </script>
 {% endblock %}
