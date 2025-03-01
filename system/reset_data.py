@@ -36,6 +36,12 @@ def reset_database():
         """)
         print("Admin account created/updated successfully.")
 
+        # Insert status threshold
+        cursor.execite("""
+            INSERT INTO Status (StatusName, Threshold) 
+            Values ('Unlikely', -10), ('Even',0), ('Possible', 1), ('Implemented', 3);
+        """)
+
         # Commit changes and close connection
         conn.commit()
         cursor.close()
